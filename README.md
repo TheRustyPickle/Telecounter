@@ -12,7 +12,7 @@ The GUI logo was taken randomly from google. I do not own or created the logo. Y
 
 <h4>What is a session in the GUI?</h4>
 
-The GUI uses Telethon library. It automatically creates a session file that saves the necessary data to automatically log in again each time you run it. All data are saved locally. All action are done by Telegram API. It is asked to never share the session file/s with anyone
+The GUI uses Telethon library. It automatically creates a session file that saves the necessary data to automatically log in again each time you run it. All data are saved locally. All action are done by Telegram API. It is asked to never share the session file/s with anyone. To create a session API ID and API Hash will be required. It is possible to find them on official <a hred='https://my.telegram.org/'>Telegram website</a>
 
 <h4>What is KPI ID?</h4>
 
