@@ -4,7 +4,9 @@ This was created for personal use and to make my life easier
 
 <h4> How to run</h4>
 
-Download the executable from latest release. Tested only on Windows and Arch Linux.
+Download the executable from latest release for one click, no library running or download all files and run Message_Counter.py with required library
+
+GUI Design tested only on Windows and Arch Linux.
 
 The GUI logo was taken randomly from google. I do not own or created the logo. You are free to change the logo to your desiring but the filename must remain logo.png
 
