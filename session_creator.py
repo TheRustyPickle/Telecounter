@@ -75,6 +75,7 @@ class session_builder:
         if text_data.startswith('add_sess'):
             text_data = text_data[9:]
             self.ui.combobox_session.addItem(text_data)
+            self.ui.combo_session_2.addItem(text_data)
         elif text_data.startswith('ph_hash'):
             text_data = text_data[8:]
             self.phone_hash = text_data
