@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>648</width>
+    <width>650</width>
     <height>438</height>
    </rect>
   </property>
@@ -20,19 +20,14 @@
    <string>Message Counter</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">QMainWindow{
-background-color:white}</string>
+   <string notr="true">QMainWindow{background-color:white}</string>
   </property>
   <property name="tabShape">
    <enum>QTabWidget::Rounded</enum>
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="styleSheet">
-    <string notr="true">QObject{background-color:white}
-
-QComboBox{
-color:black
-}</string>
+    <string notr="true"/>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout_3">
     <item>
@@ -46,9 +41,6 @@ color:black
       <property name="styleSheet">
        <string notr="true">QTabWidget::tab-bar {alignment: center;
 }
-
-QTabWidget{
-background-color:white}
 
 QScrollBar:horizontal{
     border: 2px solid grey;
@@ -200,6 +192,9 @@ QScrollBar::sub-line:vertical {
             <property name="toolTipDuration">
              <number>0</number>
             </property>
+            <property name="styleSheet">
+             <string notr="true"/>
+            </property>
             <property name="currentText">
              <string>Something</string>
             </property>
@@ -226,7 +221,7 @@ QScrollBar::sub-line:vertical {
             </property>
             <property name="sizeHint" stdset="0">
              <size>
-              <width>270</width>
+              <width>240</width>
               <height>20</height>
              </size>
             </property>
@@ -667,6 +662,9 @@ QScrollBar::sub-line:vertical {
               </property>
               <property name="toolTipDuration">
                <number>0</number>
+              </property>
+              <property name="styleSheet">
+               <string notr="true"/>
               </property>
               <property name="text">
                <string>Count</string>
@@ -2147,8 +2145,8 @@ Unlock buttons
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>648</width>
-     <height>24</height>
+     <width>650</width>
+     <height>23</height>
     </rect>
    </property>
   </widget>
