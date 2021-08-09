@@ -3,8 +3,9 @@ from PyQt5.QtGui import *
 from telethon import TelegramClient
 import asyncio
 
+
 class session_builder:
-    def __init__(self, ui) -> None:
+    def __init__(self, ui):
         self.ui = ui
         self.api_hash = ''
         self.api_id = 0
@@ -26,19 +27,16 @@ class session_builder:
             client = TelegramClient(sess_name, api_id, api_hash)
             await client.connect()
             try:
-                await client.sign_in(phone, tg_code, phone_code_hash=self.phone_hash)
+                await client.sign_in(phone, tg_code,
+                                     phone_code_hash=self.phone_hash)
             except Exception as e:
                 print(e)
                 if 'SessionPasswordNeededError' in str(e) or 'Two-steps verification is enabled and a password is required' in str(e):
                     await client.sign_in(password=password)
                 elif 'The phone code entered was invalid' in str(e):
                     pass
-                    #self.ui.label_loading_2.setHidden(False)
-                    #self.ui.label_loading_2.setText("Wrong Telegram Code. Try again")
                 else:
                     pass
-                    #self.ui.label_loading_2.setHidden(False)
-                    #self.ui.label_loading_2.setText("Something else went wrong. Try again")
             self.ui.combobox_session.addItem(sess_name)
             await client.disconnect()
             try:
@@ -48,7 +46,7 @@ class session_builder:
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(create())
-    
+
     def reload_value(self):
         self.reload_pressed = True
 
@@ -59,7 +57,6 @@ class session_builder:
         self.sess_name = self.ui.box_session_name.text()
         self.tg_code = self.ui.box_tg_code.text()
         self.phone = self.ui.box_phone.text()
-        #self.sess_create()
 
     def clear_boxes(self):
         self.ui.box_api_hash.clear()
@@ -92,22 +89,28 @@ class session_builder:
         self.ui.button_remove.setEnabled(False)
         self.ui.button_add_user.setEnabled(False)
         self.thread = QThread()
-        self.worker = code_create('tele_code', self.api_id, self.api_hash, self.sess_name, self.phone, self.tg_pass, self.tg_code, self.phone_hash)
+        self.worker = code_create('tele_code', self.api_id, self.api_hash,
+                                  self.sess_name, self.phone, self.tg_pass,
+                                  self.tg_code, self.phone_hash)
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
-        self.thread.finished.connect(lambda: self.ui.button_create_sess.setEnabled(True))
-        self.thread.finished.connect(lambda: self.ui.button_send_code.setEnabled(True))
-        self.thread.finished.connect(lambda: self.ui.Button_count.setEnabled(True))
-        self.thread.finished.connect(lambda: self.ui.button_reload.setEnabled(True))
+        self.thread.finished.connect(lambda: self.ui.
+                                     button_create_sess.setEnabled(True))
+        self.thread.finished.connect(lambda: self.ui.
+                                     button_send_code.setEnabled(True))
+        self.thread.finished.connect(lambda: self.ui.
+                                     Button_count.setEnabled(True))
+        self.thread.finished.connect(lambda: self.ui.
+                                     button_reload.setEnabled(True))
         self.worker.progress.connect(self.status_bar_updater)
         self.worker.finished.connect(self.finishing)
         self.thread.start()
 
     def finishing(self):
-        if self.reload_pressed == True:
+        if self.reload_pressed is True:
             self.ui.button_save.setEnabled(True)
             self.ui.button_remove.setEnabled(True)
             self.ui.button_add_user.setEnabled(True)
@@ -119,26 +122,34 @@ class session_builder:
             self.ui.button_create_sess.setEnabled(False)
             self.ui.button_send_code.setEnabled(False)
             self.thread = QThread()
-            self.worker = code_create('create', self.api_id, self.api_hash, self.sess_name, self.phone, self.tg_pass, self.tg_code, self.phone_hash)
+            self.worker = code_create('create', self.api_id, self.api_hash,
+                                      self.sess_name, self.phone, self.tg_pass,
+                                      self.tg_code, self.phone_hash)
             self.worker.moveToThread(self.thread)
             self.thread.started.connect(self.worker.run)
             self.worker.finished.connect(self.thread.quit)
             self.worker.finished.connect(self.worker.deleteLater)
             self.thread.finished.connect(self.thread.deleteLater)
-            self.thread.finished.connect(lambda: self.ui.button_create_sess.setEnabled(True))
-            self.thread.finished.connect(lambda: self.ui.button_send_code.setEnabled(True))
-            self.thread.finished.connect(lambda: self.ui.Button_count.setEnabled(True))
+            self.thread.finished.connect(lambda: self.ui.
+                                         button_create_sess.setEnabled(True))
+            self.thread.finished.connect(lambda: self.ui.
+                                         button_send_code.setEnabled(True))
+            self.thread.finished.connect(lambda: self.ui.
+                                         Button_count.setEnabled(True))
             self.worker.progress.connect(self.status_bar_updater)
             self.worker.completed.connect(self.clear_boxes)
             self.thread.start()
         except Exception as e:
             print(e)
 
+
 class code_create(QObject):
     progress = pyqtSignal(str)
     finished = pyqtSignal()
     completed = pyqtSignal()
-    def __init__(self, func_name, api_id, api_hash, sess_name, phone, password, tg_code, phone_hash):
+
+    def __init__(self, func_name, api_id, api_hash, sess_name, phone, password,
+                 tg_code, phone_hash):
         super().__init__()
         self.func_name = func_name
         self.api_id = api_id
@@ -161,7 +172,6 @@ class code_create(QObject):
                 await client.connect()
                 ph_hash = await client.sign_in(phone)
                 self.progress.emit('Code Sent Successfully')
-                #self.phone_hash = ph_hash.phone_code_hash
                 self.progress.emit(f'ph_hash {ph_hash.phone_code_hash}')
                 await client.disconnect()
                 try:
@@ -189,7 +199,8 @@ class code_create(QObject):
                 try:
                     self.progress.emit('Logging in')
                     print(phone, tg_code, self.phone_hash)
-                    await client.sign_in(phone, tg_code, phone_code_hash=self.phone_hash)
+                    await client.sign_in(phone, tg_code,
+                                         phone_code_hash=self.phone_hash)
                     await client.disconnect()
                     try:
                         await client.disconnected
@@ -217,7 +228,7 @@ class code_create(QObject):
                         self.progress.emit('Wrong Telegram Code. Try again')
                     else:
                         self.progress.emit('Something went wrong. Please try again')
-                
+
                 self.finished.emit()
                 self.finished.emit()
             except Exception as e:

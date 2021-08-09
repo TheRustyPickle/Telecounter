@@ -11,6 +11,7 @@ api_id = 1234567
 api_hash = 'test'
 client = ''
 
+
 class id_manager:
     def __init__(self, ui):
         self.ok = 'nothing'
@@ -19,7 +20,6 @@ class id_manager:
         self.session_name = ''
         self.loaded_data = {}
         self.selected_item = ''
-
 
     def list_selected(self, item):
         self.selected_item = item.text()
@@ -45,7 +45,7 @@ class id_manager:
                 pass
             else:
                 user_id = self.loaded_data[i][0]
-                user_name =  f'@{self.loaded_data[i][1]}'
+                user_name = f'@{self.loaded_data[i][1]}'
                 new_list[user_id] = user_name
         print(new_list)
         data_store = open('resource/kpi_id.pckl', 'wb')
@@ -56,7 +56,6 @@ class id_manager:
         accounts = pickle.load(data_store)
         data_store.close()
         self.ui.statusBar().showMessage('Data Saved')
-
 
     def add_user(self):
         self.ui.Button_count.setEnabled(False)
@@ -76,13 +75,14 @@ class id_manager:
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
-        self.thread.finished.connect(lambda: self.ui.button_create_sess.setEnabled(True))
-        self.thread.finished.connect(lambda: self.ui.button_send_code.setEnabled(True))
-        self.thread.finished.connect(lambda: self.ui.Button_count.setEnabled(True))
-        self.thread.finished.connect(lambda: self.ui.button_reload.setEnabled(True))
-        #self.thread.finished.connect(lambda: self.ui.button_save.setEnabled(True))
-        #self.thread.finished.connect(lambda: self.ui.button_remove.setEnabled(True))
-        #self.thread.finished.connect(lambda: self.ui.button_add_user.setEnabled(True))
+        self.thread.finished.connect(
+            lambda: self.ui.button_create_sess.setEnabled(True))
+        self.thread.finished.connect(
+            lambda: self.ui.button_send_code.setEnabled(True))
+        self.thread.finished.connect(
+            lambda: self.ui.Button_count.setEnabled(True))
+        self.thread.finished.connect(
+            lambda: self.ui.button_reload.setEnabled(True))
         self.worker.progress.connect(self.list_updater)
         self.worker.progress_2.connect(self.bar_updater)
         self.worker.clear_text.connect(self.clear_status_bar)
@@ -92,6 +92,10 @@ class id_manager:
         self.thread.start()
 
     def reload_list(self):
+        global accounts
+        data_store = open('resource/kpi_id.pckl', 'rb')
+        accounts = pickle.load(data_store)
+        data_store.close()
         self.ui.listWidget.clear()
         self.ui.Button_count.setEnabled(False)
         self.ui.button_create_sess.setEnabled(False)
@@ -104,19 +108,21 @@ class id_manager:
         self.ui.label_4.setHidden(True)
 
         self.thread = QThread()
-        self.worker = checking_accounts(self.session_name, self.acc_list, 'Reload')
+        self.worker = checking_accounts(
+            self.session_name, self.acc_list, 'Reload')
         self.worker.moveToThread(self.thread)
         self.thread.started.connect(self.worker.run)
         self.worker.finished.connect(self.thread.quit)
         self.worker.finished.connect(self.worker.deleteLater)
         self.thread.finished.connect(self.thread.deleteLater)
-        self.thread.finished.connect(lambda: self.ui.button_create_sess.setEnabled(True))
-        self.thread.finished.connect(lambda: self.ui.button_send_code.setEnabled(True))
-        self.thread.finished.connect(lambda: self.ui.Button_count.setEnabled(True))
-        self.thread.finished.connect(lambda: self.ui.button_reload.setEnabled(True))
-        #self.thread.finished.connect(lambda: self.ui.button_save.setEnabled(True))
-        #self.thread.finished.connect(lambda: self.ui.button_remove.setEnabled(True))
-        #self.thread.finished.connect(lambda: self.ui.button_add_user.setEnabled(True))
+        self.thread.finished.connect(
+            lambda: self.ui.button_create_sess.setEnabled(True))
+        self.thread.finished.connect(
+            lambda: self.ui.button_send_code.setEnabled(True))
+        self.thread.finished.connect(
+            lambda: self.ui.Button_count.setEnabled(True))
+        self.thread.finished.connect(
+            lambda: self.ui.button_reload.setEnabled(True))
         self.worker.progress.connect(self.list_updater)
         self.worker.progress_2.connect(self.bar_updater)
         self.worker.clear_text.connect(self.clear_status_bar)
@@ -130,7 +136,7 @@ class id_manager:
 
     def clear_status_bar(self):
         self.ui.statusBar().clearMessage()
-    
+
     def bar_updater(self, data):
         self.ui.statusBar().showMessage(f'{data}')
 
@@ -175,37 +181,39 @@ class checking_accounts(QObject):
             client = TelegramClient(self.sess_name, api_id, api_hash)
             await client.connect()
             me = await client.get_me()
-            if me == 'None' or me == None:
+            if me == 'None' or me is None:
                 print('Session incomplete')
                 self.progress_2.emit('Session Invalid. Create a new Session to continue')
                 self.finished.emit({})
                 self.incomplete.emit()
             else:
-                accounts = dict(sorted(accounts.items(), key=lambda item: item[1]))
+                accounts = dict(
+                    sorted(accounts.items(), key=lambda item: item[1]))
                 async with client:
                     for user in accounts:
                         try:
                             try:
                                 entity = await client.get_entity(user)
-                            except:
+                            except Exception:
                                 entity = await client.get_entity(accounts[user])
                             id_num = entity.id
                             username = entity.username
                             first_name = entity.first_name
                             last_name = entity.last_name
                             full_name = f'{first_name}'
-                            if last_name != None:
+                            if last_name is not None:
                                 full_name += f' {last_name}'
-                            if username != None:
+                            if username is not None:
                                 full_name += f' : {username}'
                             else:
                                 full_name += f': Nothing'
-                            
+
                             self.processed_acc[full_name] = [id_num, username]
                             self.progress.emit(full_name)
 
                         except Exception as e:
-                            self.progress.emit(f'Could Not Find {user} {accounts[user]}')
+                            self.progress.emit(
+                                f'Could Not Find {user} {accounts[user]}')
                             self.processed_acc[f'Could Not Find {user} {accounts[user]}'] = [id_num, 'Unknown']
                 await client.disconnect()
                 try:
@@ -221,9 +229,10 @@ class checking_accounts(QObject):
             client = TelegramClient(self.sess_name, api_id, api_hash)
             await client.connect()
             me = await client.get_me()
-            if me == 'None' or me == None:
+            if me == 'None' or me is None:
                 print('Session incomplete')
-                self.progress_2.emit('Session Invalid. Create a new Session to continue')
+                self.progress_2.emit(
+                    'Session Invalid. Create a new Session to continue')
                 self.finished.emit({})
                 self.incomplete.emit()
             else:
@@ -239,19 +248,21 @@ class checking_accounts(QObject):
                         first_name = entity.first_name
                         last_name = entity.last_name
                         full_name = f'{first_name}'
-                        if last_name != None:
+                        if last_name is not None:
                             full_name += f' {last_name}'
-                        if username != None:
+                        if username is not None:
                             full_name += f': {username}'
                         else:
                             full_name += f':Nothing'
 
                         self.processed_acc[full_name] = [id_num, username]
                         self.progress.emit(full_name)
-                        self.progress_2.emit('User Added To List. Press Save to Save Data. Duplicates will be removed')
+                        self.progress_2.emit(
+                            'User Added To List. Press Save to Save Data. Duplicates will be removed')
                     except Exception as e:
                         print(e)
-                        self.progress_2.emit(f'Error Getting Data on User {self.acc_list}')
+                        self.progress_2.emit(
+                            f'Error Getting Data on User {self.acc_list}')
                 self.finished.emit(self.processed_acc)
                 self.complete.emit()
         loop = asyncio.new_event_loop()

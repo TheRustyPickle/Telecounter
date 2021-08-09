@@ -193,7 +193,7 @@ QScrollBar::sub-line:vertical {
              <number>0</number>
             </property>
             <property name="styleSheet">
-             <string notr="true"/>
+             <string notr="true">color:black</string>
             </property>
             <property name="currentText">
              <string>Something</string>
@@ -908,6 +908,14 @@ QScrollBar::sub-line:vertical {
                 <set>AlignCenter</set>
                </property>
               </column>
+              <column>
+               <property name="text">
+                <string>Average Char</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignCenter</set>
+               </property>
+              </column>
              </widget>
             </item>
             <item>
@@ -997,6 +1005,14 @@ QScrollBar::sub-line:vertical {
               <column>
                <property name="text">
                 <string>User ID</string>
+               </property>
+               <property name="textAlignment">
+                <set>AlignCenter</set>
+               </property>
+              </column>
+              <column>
+               <property name="text">
+                <string>Average Char</string>
                </property>
                <property name="textAlignment">
                 <set>AlignCenter</set>
@@ -2012,6 +2028,9 @@ Unlock buttons
                   <property name="toolTip">
                    <string>Session File Name</string>
                   </property>
+                  <property name="styleSheet">
+                   <string notr="true">color:black</string>
+                  </property>
                  </widget>
                 </item>
                 <item>
@@ -2146,7 +2165,7 @@ Unlock buttons
      <x>0</x>
      <y>0</y>
      <width>650</width>
-     <height>23</height>
+     <height>24</height>
     </rect>
    </property>
   </widget>
