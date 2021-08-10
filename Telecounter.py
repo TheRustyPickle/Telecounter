@@ -581,6 +581,7 @@ class main_form(QMainWindow):
         self.all_log = {0: [], 1: [], 2: [], 3: [], 4: []}
         self.kpi_cells = {}
         self.all_cells = {}
+        self.total_mess_char = {}
         self.largest_text_all = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
         self.largest_text_kpi = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
         self.force_stop = 2
@@ -620,7 +621,6 @@ class main_form(QMainWindow):
     def total_mess_saver(self, user_data):
         user_id = int(user_data[0])
         mess_char = int(user_data[1])
-
         if user_id not in self.total_mess_char:
             self.total_mess_char[user_id] = mess_char
         else:
