@@ -7,13 +7,21 @@ from threading import Thread
 from PyQt5 import uic
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QAction, QDesktopWidget, QPushButton, QLabel, QVBoxLayout, QWidget, QHBoxLayout
-from PyQt5.QtCore import QThread, pyqtSignal, QObject, Qt, QTimer
+from PyQt5.QtCore import QRunnable, QThread, pyqtSignal, QObject, Qt, QTimer
 from PyQt5.QtGui import *
 from telethon import TelegramClient
 import asyncio
 import pickle
 from session_creator import *
 from id_manager import *
+
+#[x]only alert version if it's below
+#[ ] add multi session counting
+    #TODO switch to QRunnable
+    #TODO transport most variables from inside the thread to the main UI class
+    #TODO remove any update UI number dependancy from the thread
+    #TODO signal all numbers from threads to the ui class
+#[ ] add charting based on kpi and all other users
 
 version = 'v1.2'
 new_version = ''
@@ -165,7 +173,9 @@ class main_form(QMainWindow):
 
     def check_update(self):  # for opening the new version available form
         print('Current Version', version)
-        if version != new_version:
+        version_num = float(version.split('v')[1])
+        new_version_num = float(new_version.split('v')[1])
+        if version_num < new_version_num:
             self.w = version_form()
             self.w.show()
         self.timer.stop()
@@ -558,7 +568,7 @@ class main_form(QMainWindow):
             self.counting_time = 1
         else:
             self.counting_time -= 1
-
+            
     def client_starter(self):
         self.reload_kpi()
         while self.ui.table_widget_1.rowCount() > 0:
@@ -770,7 +780,6 @@ class Worker(QObject):
                 async with client:
                     async for message in client.iter_messages(self.group_name,
                                         offset_id=self.group_ending):
-                        mess_len = 0
                         try:
                             mess_sender = message.from_id.user_id
                             if mess_sender in self.message_data:
@@ -799,9 +808,13 @@ class Worker(QObject):
 
                             try:
                                 mess_text = message.message
-                                mess_len = len(str(mess_text))
-                                self.mess_char.emit(
-                                    [message.from_id.user_id, mess_len])
+                                try:
+                                    mess_len = len(str(mess_text))
+                                    if mess_len == 0:
+                                        mess_len = 1    #if it's a sticker len is going to be 0, so make it 1
+                                    self.mess_char.emit([message.from_id.user_id, mess_len])
+                                except Exception:
+                                    pass
                                 if int(message.id) <= self.group_starting:
                                     self.pending = 100
 
