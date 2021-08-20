@@ -3,11 +3,12 @@ import os
 import pyperclip
 import requests
 import webbrowser
+import time
 from threading import Thread
 from PyQt5 import uic
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QAction, QDesktopWidget, QPushButton, QLabel, QVBoxLayout, QWidget, QHBoxLayout
-from PyQt5.QtCore import QRunnable, QThread, pyqtSignal, QObject, Qt, QTimer
+from PyQt5.QtCore import QRunnable, QThread, pyqtSignal, QObject, Qt, QTimer, QThreadPool, pyqtSlot
 from PyQt5.QtGui import *
 from telethon import TelegramClient
 import asyncio
@@ -16,11 +17,8 @@ from session_creator import *
 from id_manager import *
 
 #[x]only alert version if it's below
-#[ ] add multi session counting
-    #TODO switch to QRunnable
-    #TODO transport most variables from inside the thread to the main UI class
-    #TODO remove any update UI number dependancy from the thread
-    #TODO signal all numbers from threads to the ui class
+#[x] add multi session counting
+    #[x] switch to QRunnable
 #[ ] add charting based on kpi and all other users
 
 version = 'v1.2'
@@ -116,6 +114,14 @@ class main_form(QMainWindow):
         self.cu_selected_all = {0: [], 1: [], 2: [], 3: [], 4: []}
         self.cu_selected_kpi = {0: [], 1: [], 2: [], 3: [], 4: []}
 
+        self.mess_value = 0
+        self.mess_id_latest = 0
+        self.incomplete_sess = []
+        self.checked_sess = []
+        self.cu_bar_value = {}
+        self.cu_total_mess = {}
+        self.cu_kpi_mess = {}
+        
         self.manager = id_manager(self.ui)
         self.sess = session_builder(self.ui)
         self.session_detector()
@@ -123,6 +129,8 @@ class main_form(QMainWindow):
         self.connections()
         self.modifier()
         self.timer = QTimer()
+        self.thread_timer = QTimer()
+        self.thread_timer.timeout.connect(self.multi_client)
         # run the function after 10 seconds
         self.timer.timeout.connect(self.check_update)
         self.timer.setInterval(10000)
@@ -568,55 +576,42 @@ class main_form(QMainWindow):
             self.counting_time = 1
         else:
             self.counting_time -= 1
-            
-    def client_starter(self):
-        self.reload_kpi()
-        while self.ui.table_widget_1.rowCount() > 0:
-            self.ui.table_widget_1.removeRow(0)
-        while self.ui.table_widget_2.rowCount() > 0:
-            self.ui.table_widget_2.removeRow(0)
-        self.ui.table_widget_1.setRowCount(5)
-        self.ui.table_widget_2.setRowCount(5)
-        self.ui.progressBar.setValue(0)
-        self.ui.Button_count.setEnabled(False)
-        self.ui.button_create_sess.setEnabled(False)
-        self.ui.button_send_code.setEnabled(False)
-        self.ui.button_reload.setEnabled(False)
-        self.ui.button_save.setEnabled(False)
-        self.ui.button_remove.setEnabled(False)
-        self.ui.button_add_user.setEnabled(False)
-        self.ui.progressBar.setValue(0)
-        self.running = True
-        self.kpi_log = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.all_log = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.kpi_cells = {}
-        self.all_cells = {}
-        self.total_mess_char = {}
-        self.largest_text_all = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
-        self.largest_text_kpi = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
-        self.force_stop = 2
-        self.thread = QThread()
-        self.worker = Worker(self.group_name, self.group_starting,
-                             self.group_ending,
-                             self.cu_session, self.create_log)
-        self.worker.moveToThread(self.thread)
-        self.thread.started.connect(self.worker.run)
-        self.worker.finished.connect(self.thread.quit)
-        self.worker.finished.connect(self.worker.deleteLater)
-        self.thread.finished.connect(self.thread.deleteLater)
-        self.worker.progress.connect(self.data_distributor)
-        self.worker.list_size.connect(self.row_amount)
-        self.worker.row_data.connect(self.set_row_data)
-        self.worker.row_data_2.connect(self.set_row_data_kpi)
-        self.worker.mess_char.connect(self.total_mess_saver)
-        self.worker.finished.connect(self.finishing)
-        self.thread.start()
-
+        
     def data_distributor(self, list_data):
         print(
             f'Bar Value: {list_data[0]}, Total Message: {list_data[1]}, Counter: {list_data[2]}')
         self.progress_bar(int(list_data[0]))
         self.label_changer(int(list_data[1]), int(list_data[2]))
+        self.counting_label()
+
+    def data_distributor_multi(self, list_data):
+        thread_number = int(list_data[3])
+        self.cu_bar_value[thread_number] = int(list_data[0])
+        self.cu_total_mess[thread_number] = int(list_data[1])
+        self.cu_kpi_mess[thread_number] = int(list_data[2])
+
+        bar_value = 0
+        tot_mess = 0
+        tot_kpi = 0
+
+        for i in self.cu_bar_value:
+            bar_value += self.cu_bar_value[i]
+
+        if bar_value > 100:
+            bar_value = 100
+
+        for i in self.cu_total_mess:
+            tot_mess += self.cu_total_mess[i]
+
+        for i in self.cu_kpi_mess:
+            tot_kpi += self.cu_kpi_mess[i]
+        #bar_value = int(bar_value / len(self.cu_bar_value))
+        #tot_mess = int(bar_value / len(self.cu_total_mess))
+        #tot_kpi = int(bar_value / len(self.cu_kpi_mess))
+        #print(
+        #    f'Bar Value: {bar_value}, Total Message: {tot_mess}, Counter: {tot_kpi}')
+        self.progress_bar(bar_value)
+        self.label_changer(tot_mess, tot_kpi)
         self.counting_label()
 
     def progress_bar(self, num):
@@ -671,7 +666,10 @@ class main_form(QMainWindow):
         self.total_row_all = num
 
     def set_row_data(self, data):
-        average_char = int(self.total_mess_char[int(data[4])] / int(data[2]))
+        try:
+            average_char = int(self.total_mess_char[int(data[4])] / int(data[2]))
+        except:
+            average_char = 0
         name = QtWidgets.QTableWidgetItem(str(data[0]))
         username = QtWidgets.QTableWidgetItem(str(data[1]))
         count = QtWidgets.QTableWidgetItem()
@@ -709,7 +707,10 @@ class main_form(QMainWindow):
             self.counting_time -= 1
 
     def set_row_data_kpi(self, data):
-        average_char = int(self.total_mess_char[int(data[4])] / int(data[2]))
+        try:
+            average_char = int(self.total_mess_char[int(data[4])] / int(data[2]))
+        except:
+            average_char = 0
         name = QtWidgets.QTableWidgetItem(str(data[0]))
         username = QtWidgets.QTableWidgetItem(str(data[1]))
         count = QtWidgets.QTableWidgetItem()
@@ -738,17 +739,127 @@ class main_form(QMainWindow):
         self.kpi_log[4].append(str(average_char))
         self.ui.table_widget_2.setRowCount(len(self.kpi_log[0])+1)
 
+    def mess_value_setter(self, mess_val):
+        self.mess_value = mess_val
 
-class Worker(QObject):
+    def incom_sess(self, sess):
+        sess_name = sess.split(' is incomplete')[0]
+        self.incomplete_sess.append(sess_name)
+
+    def latest_mess_id(self, id_num):
+        self.mess_id_latest = id_num
+
+    def client_starter(self):
+        self.reload_kpi()
+        while self.ui.table_widget_1.rowCount() > 0:
+            self.ui.table_widget_1.removeRow(0)
+        while self.ui.table_widget_2.rowCount() > 0:
+            self.ui.table_widget_2.removeRow(0)
+        self.ui.table_widget_1.setRowCount(5)
+        self.ui.table_widget_2.setRowCount(5)
+        self.ui.progressBar.setValue(0)
+        self.ui.Button_count.setEnabled(False)
+        self.ui.button_create_sess.setEnabled(False)
+        self.ui.button_send_code.setEnabled(False)
+        self.ui.button_reload.setEnabled(False)
+        self.ui.button_save.setEnabled(False)
+        self.ui.button_remove.setEnabled(False)
+        self.ui.button_add_user.setEnabled(False)
+        self.ui.progressBar.setValue(0)
+        self.running = True
+        self.kpi_log = {0: [], 1: [], 2: [], 3: [], 4: []}
+        self.all_log = {0: [], 1: [], 2: [], 3: [], 4: []}
+        self.kpi_cells = {}
+        self.all_cells = {}
+        self.total_mess_char = {}
+        self.largest_text_all = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
+        self.largest_text_kpi = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
+        self.force_stop = 2
+        #self.single_client()
+        #return
+        #TODO break block here based on whether multi client is selected
+        pool = QThreadPool.globalInstance()
+        available_sess = ['tom', 'moov']
+        for i in available_sess:
+            self.checked_sess.append(i)
+            self.worker = session_verifier(self.group_name, i)
+            self.worker.signal.incomplete_sess.connect(self.incom_sess)
+            self.worker.signal.latest_mess.connect(self.latest_mess_id)
+            pool.start(self.worker)
+        self.thread_timer.setInterval(10000)
+        self.thread_timer.start()
+        #TODO remove the timer somehow, add status bar text
+
+    def single_client(self):
+        self.thread_timer.stop()
+        threadCount = QThreadPool.globalInstance().maxThreadCount()
+        pool = QThreadPool.globalInstance()
+        for i in range(threadCount):
+            self.worker = Worker(self.group_name, self.group_starting,
+                             self.group_ending,
+                             self.cu_session, self.create_log, 0, 0)
+            self.worker.signal.progress.connect(self.data_distributor)
+            self.worker.signal.list_size.connect(self.row_amount)
+            self.worker.signal.row_data.connect(self.set_row_data)
+            self.worker.signal.row_data_2.connect(self.set_row_data_kpi)
+            self.worker.signal.mess_char.connect(self.total_mess_saver)
+            self.worker.signal.finished.connect(self.finishing)
+            pool.start(self.worker)
+            break
+    
+    def multi_client(self):
+        self.thread_timer.stop()
+        pool = QThreadPool.globalInstance()
+        available_sess = ['tom', 'moov'] #TODO change to detected sessions
+        thread_num = 0
+        total_counting = int((self.mess_id_latest - self.group_starting))
+        part_value = int(total_counting/(len(available_sess)))
+        new_starting = self.group_starting
+        parts_start = {}
+        parts_end = {}
+        for i in available_sess:
+            if i == available_sess[-1]:
+                parts_start[i] = self.group_starting
+            else:
+                parts_start[i] = new_starting + part_value
+                new_starting += part_value
+        
+        message_value = 100 / (self.mess_id_latest - self.group_starting)
+        parts_end = {}
+        for i in range(len(available_sess)):
+            if len(parts_end) == 0:
+                parts_end[available_sess[i]] = 0#self.mess_id_latest
+            else:
+                parts_end[available_sess[i]] = parts_start[available_sess[i-1]]
+
+        for i in available_sess:
+            thread_num += 1
+            self.worker = Worker(self.group_name, parts_start[i],
+                             parts_end[i],
+                             i, self.create_log, thread_num, len(available_sess), mess_value=message_value)
+            self.worker.signal.progress.connect(self.data_distributor_multi)
+            self.worker.signal.list_size.connect(self.row_amount)
+            self.worker.signal.row_data.connect(self.set_row_data)
+            self.worker.signal.row_data_2.connect(self.set_row_data_kpi)
+            self.worker.signal.mess_char.connect(self.total_mess_saver)
+            self.worker.signal.finished.connect(self.finishing)
+            pool.start(self.worker)
+            #break
+
+class worker_signals(QObject):
     finished = pyqtSignal(list)
     progress = pyqtSignal(list)
     list_size = pyqtSignal(int)
     row_data = pyqtSignal(list)
     row_data_2 = pyqtSignal(list)
     mess_char = pyqtSignal(list)
+    mess_value = pyqtSignal(object)
+    latest_mess = pyqtSignal(int)
+    incomplete_sess = pyqtSignal(str)
 
+class Worker(QRunnable):
     def __init__(self, group_name, group_starting,
-                 group_ending, session_name, create_log):
+                 group_ending, session_name, create_log, thread_num, total_thread, mess_value=0):
         super().__init__()
         self.pending = 0
         self.cu_session = session_name
@@ -758,28 +869,32 @@ class Worker(QObject):
         self.group_starting = group_starting
         self.total_mess = 0
         self.counter = 0
-        self.mess_value = 0
+        self.mess_value = mess_value
         self.bar = 0
         self.pending_message = 0
         self.message_data = {}
         self.row_number_all = 0
         self.row_number_kpi = 0
         self.create_log = create_log
+        self.thread_num = thread_num
+        self.total_thread = total_thread
+        self.signal = worker_signals()
 
+    @pyqtSlot()
     def run(self):
         async def kpi_counter():
-
             client = TelegramClient(self.cu_session, api_id, api_hash)
             await client.connect()
             me = await client.get_me()
             if me == 'None' or me is None:
                 print('Session incomplete')
-                self.finished.emit(['incomplete', 'incomplete'])
+                self.signal.finished.emit(['incomplete', 'incomplete'])
 
             else:
                 async with client:
                     async for message in client.iter_messages(self.group_name,
                                         offset_id=self.group_ending):
+
                         try:
                             mess_sender = message.from_id.user_id
                             if mess_sender in self.message_data:
@@ -788,7 +903,9 @@ class Worker(QObject):
                                 self.message_data[mess_sender] = 1
 
                         except Exception as e:
-                            print(e)
+                            exc_type, exc_obj, exc_tb = sys.exc_info()
+                            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                            print(exc_type, fname, exc_tb.tb_lineno, e)
                         try:
                             if self.last_id != 0:
                                 self.total_mess += (self.last_id - message.id)
@@ -805,15 +922,17 @@ class Worker(QObject):
                                     self.mess_value_counter(self.group_ending)
 
                             self.pending_message += 1
-
                             try:
                                 mess_text = message.message
                                 try:
                                     mess_len = len(str(mess_text))
                                     if mess_len == 0:
                                         mess_len = 1    #if it's a sticker len is going to be 0, so make it 1
-                                    self.mess_char.emit([message.from_id.user_id, mess_len])
-                                except Exception:
+                                    self.signal.mess_char.emit([message.from_id.user_id, mess_len])
+                                except Exception as e:
+                                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                                    print(exc_type, fname, exc_tb.tb_lineno, e)
                                     pass
                                 if int(message.id) <= self.group_starting:
                                     self.pending = 100
@@ -836,35 +955,37 @@ class Worker(QObject):
                                     if self.bar != 99:
                                         self.bar += int(self.pending)
                                     self.pending = self.pending - int(self.pending)
-                                    self.progress.emit(
+                                    self.signal.progress.emit(
                                         [self.bar, self.total_mess,
-                                         self.counter])
+                                         self.counter, self.thread_num])
                                     await asyncio.sleep(0.02)
 
                                 elif self.pending_message > 5:
-                                    self.progress.emit(
-                                        [self.bar, self.total_mess,
-                                         self.counter])
+                                    self.signal.progress.emit(
+                                        [self.bar, self.total_mess,self.counter, self.thread_num])
                                     self.pending_message = 0
                                     await asyncio.sleep(0.02)
                             except Exception as e:
                                 self.pending += self.mess_value
                                 if self.pending_message > 5:
-                                    self.progress.emit(
-                                        [self.bar, self.total_mess,
-                                         self.counter])
+                                    self.signal.progress.emit(
+                                        [self.bar, self.total_mess,self.counter, self.thread_num])
                                     self.pending_message = 0
-                                # print(e)
+                                exc_type, exc_obj, exc_tb = sys.exc_info()
+                                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                                print(exc_type, fname, exc_tb.tb_lineno, e)
                                 pass
                         except Exception as e:
-                            # print(e)
+                            exc_type, exc_obj, exc_tb = sys.exc_info()
+                            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                            print(exc_type, fname, exc_tb.tb_lineno, e)
                             pass
 
                     if self.bar != 100:
                         self.bar = 100
                         self.pending = self.pending - int(self.pending)
-                    self.progress.emit(
-                        [self.bar, self.total_mess, self.counter])
+                    self.signal.progress.emit(
+                        [self.bar, self.total_mess, self.counter, self.thread_num])
 
                     total_all = 0
                     total_kpi = 0
@@ -873,7 +994,7 @@ class Worker(QObject):
                                key=lambda item: item[1]))
 
                     if self.create_log is True:
-                        self.list_size.emit(len(self.message_data))
+                        self.signal.list_size.emit(len(self.message_data))
 
                         for sender in self.message_data:
                             try:
@@ -893,7 +1014,7 @@ class Worker(QObject):
                                     self.message_data[sender],
                                     self.row_number_all, id_num]
                                 self.row_number_all += 1
-                                self.row_data.emit(row_data)
+                                self.signal.row_data.emit(row_data)
 
                                 if sender in accounts:
                                     row_data = [
@@ -901,12 +1022,14 @@ class Worker(QObject):
                                         self.message_data[sender],
                                         self.row_number_kpi, id_num]
                                     self.row_number_kpi += 1
-                                    self.row_data_2.emit(row_data)
+                                    self.signal.row_data_2.emit(row_data)
                                     total_kpi += self.message_data[sender]
                             except Exception as e:
-                                print(e)
+                                exc_type, exc_obj, exc_tb = sys.exc_info()
+                                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                                print(exc_type, fname, exc_tb.tb_lineno, e)
 
-                    self.finished.emit([total_all, total_kpi])
+                    self.signal.finished.emit([total_all, total_kpi])
                     await client.disconnect()
                     try:
                         await client.disconnected
@@ -916,18 +1039,56 @@ class Worker(QObject):
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(kpi_counter())
-        loop.close()
 
     def mess_value_counter(self, num):
         initial = self.group_starting
         try:
             self.mess_value = 100/(num - initial)
         except Exception as e:
-            print(e)
+            exc_type, exc_obj, exc_tb = sys.exc_info()
+            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+            print(exc_type, fname, exc_tb.tb_lineno, e)
             self.mess_value = 100
+        self.signal.mess_value.emit(self.mess_value)
         print(num - initial)
-        print(self.mess_value)
 
+class session_verifier(QRunnable):
+    def __init__(self, group_name, session_name):
+        super().__init__()
+        self.pending = 0
+        self.cu_session = session_name
+        self.group_name = group_name
+        self.signal = worker_signals()
+
+    @pyqtSlot()
+    def run(self):
+        async def verifier():
+            try:
+                client = TelegramClient(self.cu_session, api_id, api_hash)
+                await client.connect()
+                me = await client.get_me()
+                if me == 'None' or me is None:
+                    print('Session incomplete')
+                    self.signal.incomplete_sess.emit(f'{self.cu_session} is incomplete')
+
+                else:
+                    async with client:
+                        async for message in client.iter_messages(self.group_name):
+                            self.signal.latest_mess.emit(message.id)
+                            print(message.id)
+                            break
+                await client.disconnect()
+                try:
+                    await client.disconnected
+                except Exception:
+                    print('Error on disconnect')
+            except Exception:
+                pass
+
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        loop.run_until_complete(verifier())
+        #TODO add status bar text with signal, eliminate timer
 
 app = QApplication(sys.argv)
 w = main_form()
