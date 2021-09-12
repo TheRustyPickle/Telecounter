@@ -20,6 +20,10 @@ from id_manager import *
 #[x] add multi session counting
     #[x] switch to QRunnable
 #[ ] add charting based on kpi and all other users
+#[ ] when creating log change total message/kpi to 0
+#[ ] count message based on dates
+#[ ] change app name to Telecounter(top text)
+#[ ] add extra features to delete joining messages
 
 version = 'v1.2'
 new_version = ''
@@ -748,6 +752,7 @@ class main_form(QMainWindow):
 
     def latest_mess_id(self, id_num):
         self.mess_id_latest = id_num
+        self.thread_timer.setInterval(1000)
 
     def client_starter(self):
         self.reload_kpi()
@@ -812,6 +817,8 @@ class main_form(QMainWindow):
         pool = QThreadPool.globalInstance()
         available_sess = ['tom', 'moov'] #TODO change to detected sessions
         thread_num = 0
+        if int(self.group_ending) != 0:
+            self.mess_id_latest = int(self.group_ending)
         total_counting = int((self.mess_id_latest - self.group_starting))
         part_value = int(total_counting/(len(available_sess)))
         new_starting = self.group_starting
@@ -827,8 +834,10 @@ class main_form(QMainWindow):
         message_value = 100 / (self.mess_id_latest - self.group_starting)
         parts_end = {}
         for i in range(len(available_sess)):
-            if len(parts_end) == 0:
-                parts_end[available_sess[i]] = 0#self.mess_id_latest
+            if len(parts_end) == 0 and self.group_ending == 0:
+                parts_end[available_sess[i]] = 0 #self.mess_id_latest
+            elif len(parts_end) == 0 and self.group_ending != 0:
+                parts_end[available_sess[i]] = self.group_ending
             else:
                 parts_end[available_sess[i]] = parts_start[available_sess[i-1]]
 
@@ -836,7 +845,7 @@ class main_form(QMainWindow):
             thread_num += 1
             self.worker = Worker(self.group_name, parts_start[i],
                              parts_end[i],
-                             i, self.create_log, thread_num, len(available_sess), mess_value=message_value)
+                             i, self.create_log, thread_num, len(available_sess), mess_value=message_value, multi_sess=True, max_bar=100/len(available_sess))
             self.worker.signal.progress.connect(self.data_distributor_multi)
             self.worker.signal.list_size.connect(self.row_amount)
             self.worker.signal.row_data.connect(self.set_row_data)
@@ -859,7 +868,8 @@ class worker_signals(QObject):
 
 class Worker(QRunnable):
     def __init__(self, group_name, group_starting,
-                 group_ending, session_name, create_log, thread_num, total_thread, mess_value=0):
+                 group_ending, session_name, create_log, 
+                 thread_num, total_thread, mess_value=0, multi_sess=False, max_bar=0):
         super().__init__()
         self.pending = 0
         self.cu_session = session_name
@@ -878,6 +888,8 @@ class Worker(QRunnable):
         self.create_log = create_log
         self.thread_num = thread_num
         self.total_thread = total_thread
+        self.multi_sess = multi_sess
+        self.max_bar = max_bar
         self.signal = worker_signals()
 
     @pyqtSlot()
@@ -891,10 +903,11 @@ class Worker(QRunnable):
                 self.signal.finished.emit(['incomplete', 'incomplete'])
 
             else:
+                print(self.mess_value)
                 async with client:
                     async for message in client.iter_messages(self.group_name,
                                         offset_id=self.group_ending):
-
+                        
                         try:
                             mess_sender = message.from_id.user_id
                             if mess_sender in self.message_data:
@@ -920,7 +933,6 @@ class Worker(QRunnable):
                                     self.mess_value_counter(message.id)
                                 else:
                                     self.mess_value_counter(self.group_ending)
-
                             self.pending_message += 1
                             try:
                                 mess_text = message.message
@@ -952,7 +964,7 @@ class Worker(QRunnable):
                                             self.counter += 1
 
                                 if self.pending > 1:
-                                    if self.bar != 99:
+                                    if self.bar != self.max_bar:
                                         self.bar += int(self.pending)
                                     self.pending = self.pending - int(self.pending)
                                     self.signal.progress.emit(
@@ -981,9 +993,14 @@ class Worker(QRunnable):
                             print(exc_type, fname, exc_tb.tb_lineno, e)
                             pass
 
-                    if self.bar != 100:
-                        self.bar = 100
+                    if self.bar != self.max_bar and self.multi_sess == False:
+                        self.bar = self.max_bar
                         self.pending = self.pending - int(self.pending)
+                    
+                    else:
+                        if self.bar != self.max_bar and self.multi_sess == True:
+                            self.bar = self.max_bar
+                            self.pending = self.pending - int(self.pending)
                     self.signal.progress.emit(
                         [self.bar, self.total_mess, self.counter, self.thread_num])
 
@@ -1084,11 +1101,11 @@ class session_verifier(QRunnable):
                     print('Error on disconnect')
             except Exception:
                 pass
-
+        #[x]eliminate timer
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(verifier())
-        #TODO add status bar text with signal, eliminate timer
+
 
 app = QApplication(sys.argv)
 w = main_form()
