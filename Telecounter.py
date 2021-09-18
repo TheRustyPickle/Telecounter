@@ -22,8 +22,9 @@ from id_manager import *
 #[ ] add charting based on kpi and all other users
 #[ ] when creating log change total message/kpi to 0
 #[ ] count message based on dates
-#[ ] change app name to Telecounter(top text)
+#[x] change app name to Telecounter(top text)
 #[ ] add extra features to delete joining messages
+#[x] block session if searching private group and not joined
 
 version = 'v1.2'
 new_version = ''
@@ -97,14 +98,17 @@ class main_form(QMainWindow):
         self.group_starting = 0
         self.group_ending = 0
         self.cu_session = ''
+        self.worker = ''
         self.running = False
-        self.force_stop = 3
-        self.counting_time = 3
+        self.force_stop = 1
+        self.counting_time = 1
         self.cu_dots = ''
         self.create_log = True
+        self.multi_sess_selected = False
         self.reload_pressed = False
         self.starting_paste = True
         self.ending_paste = True
+        self.pri_group = False
         self.total_row_all = 0
         self.kpi_log = {0: [], 1: [], 2: [], 3: [], 4: []}
         self.all_log = {0: [], 1: [], 2: [], 3: [], 4: []}
@@ -121,7 +125,7 @@ class main_form(QMainWindow):
         self.mess_value = 0
         self.mess_id_latest = 0
         self.incomplete_sess = []
-        self.checked_sess = []
+        self.session_list = []
         self.cu_bar_value = {}
         self.cu_total_mess = {}
         self.cu_kpi_mess = {}
@@ -134,7 +138,6 @@ class main_form(QMainWindow):
         self.modifier()
         self.timer = QTimer()
         self.thread_timer = QTimer()
-        self.thread_timer.timeout.connect(self.multi_client)
         # run the function after 10 seconds
         self.timer.timeout.connect(self.check_update)
         self.timer.setInterval(10000)
@@ -484,12 +487,14 @@ class main_form(QMainWindow):
         # check currently available session files
 
         all_files = []
+        self.session_list = []
         self.ui.combobox_session.clear()
         self.ui.combo_session_2.clear()
         for files in os.listdir(os.curdir):
             if files.endswith('session'):
                 base_name = os.path.splitext(files)[0]
                 all_files.append(base_name)
+                self.session_list.append(base_name)
         if all_files == []:
             self.ui.combobox_session.addItem('Nothing Found')
             self.ui.combobox_session.setCurrentIndex(0)
@@ -518,11 +523,17 @@ class main_form(QMainWindow):
             self.create_log = True
         else:
             self.create_log = False
+        
+        if self.ui.checkbox_multi_sess.isChecked():
+            self.multi_sess_selected = True
+        else:
+            self.multi_sess_selected = False
 
         starting_data = self.ui.box_starting_mess.text()
         starting_data = "".join(starting_data.split())
         if '/c/' in starting_data:
             self.ui.statusBar().showMessage(f'Private Group Detected')
+            self.pri_group = True
 
         ending_data = self.ui.box_ending_mess.text()
         ending_data = "".join(ending_data.split())
@@ -571,6 +582,58 @@ class main_form(QMainWindow):
             self.ui.statusBar().showMessage(
                 f'Make sure the links are in correct format. Example: https://t.me/TestGroup/123456 or https://t.me/c/123456/123456')
 
+    def disable_widgets(self):
+        while self.ui.table_widget_1.rowCount() > 0:
+            self.ui.table_widget_1.removeRow(0)
+        while self.ui.table_widget_2.rowCount() > 0:
+            self.ui.table_widget_2.removeRow(0)
+        self.ui.table_widget_1.setRowCount(5)
+        self.ui.table_widget_2.setRowCount(5)
+        self.ui.progressBar.setValue(0)
+        self.ui.Button_count.setEnabled(False)
+        self.ui.button_create_sess.setEnabled(False)
+        self.ui.button_send_code.setEnabled(False)
+        self.ui.button_reload.setEnabled(False)
+        self.ui.button_save.setEnabled(False)
+        self.ui.button_remove.setEnabled(False)
+        self.ui.button_add_user.setEnabled(False)
+        self.ui.progressBar.setValue(0)
+        self.running = True
+        self.mess_id_latest = 0
+        self.kpi_log = {0: [], 1: [], 2: [], 3: [], 4: []}
+        self.all_log = {0: [], 1: [], 2: [], 3: [], 4: []}
+        self.kpi_cells = {}
+        self.all_cells = {}
+        self.total_mess_char = {}
+        self.largest_text_all = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
+        self.largest_text_kpi = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
+        self.largest_string_all = {0: '', 1: '', 2: '', 3: '', 4: ''}
+        self.largest_string_kpi = {0: [], 1: [], 2: [], 3: [], 4: []}
+        self.cu_selected_all = {0: [], 1: [], 2: [], 3: [], 4: []}
+        self.cu_selected_kpi = {0: [], 1: [], 2: [], 3: [], 4: []}
+        self.cu_bar_value = {}
+        self.cu_total_mess = {}
+        self.cu_kpi_mess = {}
+        self.force_stop = 2
+
+    def enable_widgets(self):
+        self.ui.Button_count.setEnabled(True)
+        self.ui.button_create_sess.setEnabled(True)
+        self.ui.button_send_code.setEnabled(True)
+        self.ui.button_reload.setEnabled(True)
+        if self.reload_pressed is True:
+            self.ui.button_save.setEnabled(True)
+            self.ui.button_remove.setEnabled(True)
+            self.ui.button_add_user.setEnabled(True)
+        self.group_name = ''
+        self.group_name_2 = ''
+        self.group_starting = 0
+        self.group_ending = 0
+        self.cu_session = ''
+        self.running = False
+        self.force_stop = 3
+        self.counting_time = 3
+        self.cu_dots = ''
     def counting_label(self):
         if self.cu_dots == '....':
             self.cu_dots = ''
@@ -589,6 +652,8 @@ class main_form(QMainWindow):
         self.counting_label()
 
     def data_distributor_multi(self, list_data):
+        print(
+            f'Bar Value: {list_data[0]}, Total Message: {list_data[1]}, Counter: {list_data[2]}')
         thread_number = int(list_data[3])
         self.cu_bar_value[thread_number] = int(list_data[0])
         self.cu_total_mess[thread_number] = int(list_data[1])
@@ -609,11 +674,7 @@ class main_form(QMainWindow):
 
         for i in self.cu_kpi_mess:
             tot_kpi += self.cu_kpi_mess[i]
-        #bar_value = int(bar_value / len(self.cu_bar_value))
-        #tot_mess = int(bar_value / len(self.cu_total_mess))
-        #tot_kpi = int(bar_value / len(self.cu_kpi_mess))
-        #print(
-        #    f'Bar Value: {bar_value}, Total Message: {tot_mess}, Counter: {tot_kpi}')
+
         self.progress_bar(bar_value)
         self.label_changer(tot_mess, tot_kpi)
         self.counting_label()
@@ -636,26 +697,10 @@ class main_form(QMainWindow):
             self.total_mess_char[user_id] = self.total_mess_char[user_id] + mess_char
 
     def finishing(self, total_num):
-        self.ui.Button_count.setEnabled(True)
-        self.ui.button_create_sess.setEnabled(True)
-        self.ui.button_send_code.setEnabled(True)
-        self.ui.button_reload.setEnabled(True)
-        if self.reload_pressed is True:
-            self.ui.button_save.setEnabled(True)
-            self.ui.button_remove.setEnabled(True)
-            self.ui.button_add_user.setEnabled(True)
-        self.group_name = ''
-        self.group_name_2 = ''
-        self.group_starting = 0
-        self.group_ending = 0
-        self.cu_session = ''
-        self.running = False
-        self.force_stop = 3
-        self.counting_time = 3
-        self.cu_dots = ''
+        self.enable_widgets()
         if total_num[0] == 'incomplete':
             self.ui.total_2.setText(f'Total Message: 0')
-            self.ui.total_1.setText(f'Total KPI: 0')
+            self.ui.total_1.setText(f'Total KPI: 0') 
             self.ui.statusBar().showMessage(
                 'Incomplete Session. Please create one with Create Session button')
         else:
@@ -756,53 +801,72 @@ class main_form(QMainWindow):
 
     def client_starter(self):
         self.reload_kpi()
-        while self.ui.table_widget_1.rowCount() > 0:
-            self.ui.table_widget_1.removeRow(0)
-        while self.ui.table_widget_2.rowCount() > 0:
-            self.ui.table_widget_2.removeRow(0)
-        self.ui.table_widget_1.setRowCount(5)
-        self.ui.table_widget_2.setRowCount(5)
-        self.ui.progressBar.setValue(0)
-        self.ui.Button_count.setEnabled(False)
-        self.ui.button_create_sess.setEnabled(False)
-        self.ui.button_send_code.setEnabled(False)
-        self.ui.button_reload.setEnabled(False)
-        self.ui.button_save.setEnabled(False)
-        self.ui.button_remove.setEnabled(False)
-        self.ui.button_add_user.setEnabled(False)
-        self.ui.progressBar.setValue(0)
-        self.running = True
-        self.kpi_log = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.all_log = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.kpi_cells = {}
-        self.all_cells = {}
-        self.total_mess_char = {}
-        self.largest_text_all = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
-        self.largest_text_kpi = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
-        self.force_stop = 2
-        #self.single_client()
-        #return
-        #TODO break block here based on whether multi client is selected
-        pool = QThreadPool.globalInstance()
-        available_sess = ['tom', 'moov']
-        for i in available_sess:
-            self.checked_sess.append(i)
-            self.worker = session_verifier(self.group_name, i)
+        self.session_detector()
+        self.disable_widgets()
+
+        #[x] break block here based on whether multi client is selected
+        if self.multi_sess_selected == True:
+            pool = QThreadPool.globalInstance()
+            available_sess = self.session_list
+            for i in available_sess:
+                self.ui.statusBar().showMessage(f'Verifying Session {i}')
+                self.worker = session_verifier(self.group_name, i, self.pri_group)
+                self.worker.signal.incomplete_sess.connect(self.incom_sess)
+                self.worker.signal.latest_mess.connect(self.latest_mess_id)
+                pool.start(self.worker)
+                
+            try:
+                self.thread_timer.timeout.disconnect()
+            except:
+                pass
+            self.thread_timer.setInterval(5000)
+            self.thread_timer.timeout.connect(self.multi_client)
+            self.thread_timer.start()
+
+        else:
+            pool = QThreadPool.globalInstance()
+            self.worker = session_verifier(self.group_name, self.cu_session, self.pri_group)
             self.worker.signal.incomplete_sess.connect(self.incom_sess)
             self.worker.signal.latest_mess.connect(self.latest_mess_id)
             pool.start(self.worker)
-        self.thread_timer.setInterval(10000)
-        self.thread_timer.start()
-        #TODO remove the timer somehow, add status bar text
+            self.ui.statusBar().showMessage(f'Verifying Session {self.cu_session}')
+            try:
+                self.thread_timer.timeout.disconnect()
+            except:
+                pass
+            self.thread_timer.timeout.connect(self.single_client)
+            self.thread_timer.setInterval(5000)
+            self.thread_timer.start()
+        #[x] remove the timer somehow, add status bar text
 
     def single_client(self):
-        self.thread_timer.stop()
+        if self.mess_id_latest != 0:
+            self.thread_timer.stop()
+        
+        elif self.cu_session in self.incomplete_sess and self.pri_group == True:
+            self.thread_timer.stop()
+            self.ui.statusBar().showMessage(f'{self.cu_session} Incomplete Session or Private Group not joined')
+            self.enable_widgets()
+            return
+
+        elif self.cu_session in self.incomplete_sess:
+            self.thread_timer.stop()
+            self.ui.statusBar().showMessage(f'Incomplete Session {self.cu_session}')
+            self.enable_widgets()
+            return
+
+        else:
+            print('Latest Message Not Found')
+            self.thread_timer.setInterval(1000)
+            return
+        message_value = 100 / (self.mess_id_latest - self.group_starting)
         threadCount = QThreadPool.globalInstance().maxThreadCount()
         pool = QThreadPool.globalInstance()
         for i in range(threadCount):
+            
             self.worker = Worker(self.group_name, self.group_starting,
                              self.group_ending,
-                             self.cu_session, self.create_log, 0, 0)
+                             self.cu_session, self.create_log, 1, 1, mess_value=message_value, multi_sess=False, max_bar=100)
             self.worker.signal.progress.connect(self.data_distributor)
             self.worker.signal.list_size.connect(self.row_amount)
             self.worker.signal.row_data.connect(self.set_row_data)
@@ -813,9 +877,27 @@ class main_form(QMainWindow):
             break
     
     def multi_client(self):
-        self.thread_timer.stop()
+        if self.mess_id_latest != 0:
+            self.thread_timer.stop()
+
+        elif self.session_list == self.incomplete_sess:
+            self.ui.statusBar().showMessage(f'Could not work with any available session')
+            self.thread_timer.stop()
+            self.enable_widgets()
+            return
+        else:
+            self.thread_timer.setInterval(1000)
+            print('Latest Message Not Found')
+            return
         pool = QThreadPool.globalInstance()
-        available_sess = ['tom', 'moov'] #TODO change to detected sessions
+        threadCount = QThreadPool.globalInstance().maxThreadCount()
+        available_sess = self.session_list #[x] change to detected sessions
+
+        for i in self.incomplete_sess:
+            if i in available_sess:
+                available_sess.remove(i)
+
+        self.ui.statusBar().showMessage(f'Working with {len(available_sess)} sessions')
         thread_num = 0
         if int(self.group_ending) != 0:
             self.mess_id_latest = int(self.group_ending)
@@ -853,7 +935,8 @@ class main_form(QMainWindow):
             self.worker.signal.mess_char.connect(self.total_mess_saver)
             self.worker.signal.finished.connect(self.finishing)
             pool.start(self.worker)
-            #break
+            if thread_num >= int(threadCount):
+                break
 
 class worker_signals(QObject):
     finished = pyqtSignal(list)
@@ -898,6 +981,7 @@ class Worker(QRunnable):
             client = TelegramClient(self.cu_session, api_id, api_hash)
             await client.connect()
             me = await client.get_me()
+            print(self.cu_session)
             if me == 'None' or me is None:
                 print('Session incomplete')
                 self.signal.finished.emit(['incomplete', 'incomplete'])
@@ -907,7 +991,7 @@ class Worker(QRunnable):
                 async with client:
                     async for message in client.iter_messages(self.group_name,
                                         offset_id=self.group_ending):
-                        
+
                         try:
                             mess_sender = message.from_id.user_id
                             if mess_sender in self.message_data:
@@ -928,11 +1012,6 @@ class Worker(QRunnable):
                                 self.pending += self.mess_value
                             self.last_id = message.id
 
-                            if self.mess_value == 0:
-                                if self.group_ending == 0:
-                                    self.mess_value_counter(message.id)
-                                else:
-                                    self.mess_value_counter(self.group_ending)
                             self.pending_message += 1
                             try:
                                 mess_text = message.message
@@ -947,7 +1026,7 @@ class Worker(QRunnable):
                                     print(exc_type, fname, exc_tb.tb_lineno, e)
                                     pass
                                 if int(message.id) <= self.group_starting:
-                                    self.pending = 100
+                                    self.pending = self.max_bar
 
                                     if '/auscm' in mess_text:
                                         pass
@@ -966,6 +1045,8 @@ class Worker(QRunnable):
                                 if self.pending > 1:
                                     if self.bar != self.max_bar:
                                         self.bar += int(self.pending)
+                                    if self.bar > 100:
+                                        self.bar = 100
                                     self.pending = self.pending - int(self.pending)
                                     self.signal.progress.emit(
                                         [self.bar, self.total_mess,
@@ -977,6 +1058,7 @@ class Worker(QRunnable):
                                         [self.bar, self.total_mess,self.counter, self.thread_num])
                                     self.pending_message = 0
                                     await asyncio.sleep(0.02)
+
                             except Exception as e:
                                 self.pending += self.mess_value
                                 if self.pending_message > 5:
@@ -1057,24 +1139,13 @@ class Worker(QRunnable):
         asyncio.set_event_loop(loop)
         loop.run_until_complete(kpi_counter())
 
-    def mess_value_counter(self, num):
-        initial = self.group_starting
-        try:
-            self.mess_value = 100/(num - initial)
-        except Exception as e:
-            exc_type, exc_obj, exc_tb = sys.exc_info()
-            fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-            print(exc_type, fname, exc_tb.tb_lineno, e)
-            self.mess_value = 100
-        self.signal.mess_value.emit(self.mess_value)
-        print(num - initial)
-
 class session_verifier(QRunnable):
-    def __init__(self, group_name, session_name):
+    def __init__(self, group_name, session_name, private_group):
         super().__init__()
         self.pending = 0
         self.cu_session = session_name
         self.group_name = group_name
+        self.private_group = private_group
         self.signal = worker_signals()
 
     @pyqtSlot()
@@ -1090,10 +1161,27 @@ class session_verifier(QRunnable):
 
                 else:
                     async with client:
-                        async for message in client.iter_messages(self.group_name):
-                            self.signal.latest_mess.emit(message.id)
-                            print(message.id)
-                            break
+                        if self.private_group == True:
+                            group_list = []
+                            async for group in client.iter_dialogs():
+                                group_list.append(group.id)
+
+                        if self.private_group == True and self.group_name in group_list:
+                            async for message in client.iter_messages(self.group_name):
+                                self.signal.latest_mess.emit(message.id)
+                                print(message.id)
+                                break
+
+                        elif self.private_group == True and self.group_name not in group_list:
+                            print('Not joined in the Private Group')
+                            self.signal.incomplete_sess.emit(f'{self.cu_session} is incomplete')
+                        
+                        elif self.private_group == False:
+                            async for message in client.iter_messages(self.group_name):
+                                self.signal.latest_mess.emit(message.id)
+                                print(message.id)
+                                break
+
                 await client.disconnect()
                 try:
                     await client.disconnected
