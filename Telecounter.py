@@ -28,6 +28,7 @@ from id_manager import *
 #[ ] Not working properly with ending message double session  
 #[ ] Add a predetermined total message to all session
 #[ ] add a requirements.txt
+#[ ] after counting check somewhere else and make bar 100%
 
 version = 'v1.2'
 new_version = ''
@@ -917,28 +918,46 @@ class main_form(QMainWindow):
         new_starting = self.group_starting
         parts_start = {}
         parts_end = {}
-        for i in available_sess:
-            if i == available_sess[-1]:
-                parts_start[i] = self.group_starting
-            else:
-                parts_start[i] = new_starting + part_value
+
+        for i in range(len(available_sess)-1, -1, -1):
+            if i == len(available_sess)-1:
+                parts_start[available_sess[i]] = new_starting
+                parts_end[available_sess[i]] = new_starting + part_value -1
                 new_starting += part_value
+            
+            elif i == 0:
+                parts_start[available_sess[i]] = new_starting
+                parts_end[available_sess[i]] = self.mess_id_latest
+            else:
+                parts_start[available_sess[i]] = new_starting
+                new_starting += part_value
+                parts_end[available_sess[i]] = new_starting-1
+
+
+
+        #for i in available_sess:
+        #    if i == available_sess[-1]:
+        #       parts_start[i] = self.group_starting
+        #       parts_end[i] = self.group_starting
+        #    else:
+        #        parts_start[i] = new_starting + part_value
+        #        new_starting += part_value
         
         message_value = 100 / (self.mess_id_latest - self.group_starting)
-        parts_end = {}
-        for i in range(len(available_sess)):
-            if len(parts_end) == 0 and self.group_ending == 0:
-                parts_end[available_sess[i]] = 0 #self.mess_id_latest
-            elif len(parts_end) == 0 and self.group_ending != 0:
-                parts_end[available_sess[i]] = self.group_ending
-            else:
-                parts_end[available_sess[i]] = parts_start[available_sess[i-1]]-1
-        print(parts_start)
-        print(parts_end)
-        self.enable_widgets()
-        return
+        
+        #for i in available_sess:
+        #    if i == available_sess[0]:
+        #        parts_end[i] = self.group_ending
+        #    else:
+
+            #if i == available_sess[-1]:
+            #    parts_end[available_sess[i]] = self.mess_id_latest 
+            #else:
+            #    parts_end[available_sess[i]] = parts_start[available_sess[i-1]]-1
+        #self.enable_widgets()
         for i in available_sess:
             thread_num += 1
+            print(self.group_name)
             self.worker = Worker(self.group_name, parts_start[i],
                              parts_end[i],
                              i, self.create_log, thread_num, len(available_sess), mess_value=message_value, multi_sess=True, max_bar=100/len(available_sess))
@@ -988,7 +1007,7 @@ class Worker(QRunnable):
         self.multi_sess = multi_sess
         self.max_bar = max_bar
         self.signal = worker_signals()
-        print(self.group_starting, self.group_ending, self.thread_num)
+        print(self.group_name, self.group_starting, self.group_ending, self.thread_num)
 
     @pyqtSlot()
     def run(self):
@@ -1002,80 +1021,52 @@ class Worker(QRunnable):
                 self.signal.finished.emit(['incomplete', 'incomplete'])
 
             else:
-                print(self.mess_value)
                 async with client:
                     a = []
                     async for message in client.iter_messages(self.group_name,
                                         offset_id=self.group_ending):
-                        if int(message.id) < self.group_starting:  #TODO divide this in two group == and <
-                                    self.pending = self.max_bar
-                                    self.total_mess += self.last_id - self.group_starting
-                                    print(self.thread_num, self.total_mess, self.last_id, message.id)
-                                    break
+                        
+
+                        print(f'Messgage ID: {message.id}, Group Starting: {self.group_starting}, Group Ending: {self.group_ending}, Thread Number: {self.thread_num}')
+                        if int(message.id) < self.group_starting:
+                            print('here2')
+                            self.pending = self.max_bar
+                            self.total_mess += self.last_id - self.group_starting+1
+                            #print(self.thread_num, self.total_mess, self.last_id, message.id)
+                            break
+                            
+                        elif message.id > self.group_ending:
+                            pass
 
                         else:
                             try:
                                 a.append(message.id)
                             except:
                                 pass
-                            try:
-                                mess_sender = message.from_id.user_id
-                                if mess_sender in self.message_data:
-                                    self.message_data[mess_sender] = self.message_data[mess_sender] + 1
-                                elif mess_sender not in self.message_data:
-                                    self.message_data[mess_sender] = 1
-
-                            except Exception as e:
-                                exc_type, exc_obj, exc_tb = sys.exc_info()
-                                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                                #print(exc_type, fname, exc_tb.tb_lineno, e)
 
                             try:
-                                if self.group_ending != message.id and self.last_id == self.group_ending:
-                                    self.total_mess += (self.group_ending+1 - message.id)
-                                    self.pending += self.mess_value * (self.group_ending+1 - message.id)
-
-                                elif self.last_id != 0:
-                                    self.total_mess += (self.last_id - message.id)
-                                    self.pending += self.mess_value * (self.last_id - message.id)
-                                else:
-                                    self.total_mess += 1
-                                    self.pending += self.mess_value
-
-                                print(self.thread_num, self.total_mess, self.last_id, message.id)
-                                self.last_id = message.id
-                                
-                                self.pending_message += 1
-                                #print(message.id, self.total_mess)
                                 try:
-                                    mess_text = message.message
-                                    try:
-                                        mess_len = len(str(mess_text))
-                                        if mess_len == 0:
-                                            mess_len = 1    #if it's a sticker len is going to be 0, so make it 1
-                                        self.signal.mess_char.emit([message.from_id.user_id, mess_len])
-                                    except Exception as e:
-                                        exc_type, exc_obj, exc_tb = sys.exc_info()
-                                        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                                        #print(exc_type, fname, exc_tb.tb_lineno, e)
-                                        
-
-                                    if int(message.id) == self.group_starting:  #TODO divide this in two group == and <
+                                    
+                                    if int(message.id) == self.group_starting: 
                                         self.pending = self.max_bar
-
-                                        if '/auscm' in mess_text:
-                                            pass
-                                        else:
+                                        self.total_mess += self.last_id - self.group_starting+1
+                                        try:
                                             if message.from_id.user_id in accounts:
                                                 self.counter += 1
+                                        except:
+                                            pass
                                         break
 
                                     else:
-                                        if '/auscm' in mess_text:
-                                            pass
-                                        else:
+                                        self.pending = self.mess_value * (self.last_id - message.id)
+                                        self.total_mess += self.last_id - message.id
+                                        self.last_id = message.id
+                                        self.pending_message += 1
+                                        try:
                                             if message.from_id.user_id in accounts:
                                                 self.counter += 1
+                                        except:
+                                            pass
 
                                     if self.pending > 1:
                                         if self.bar != self.max_bar:
@@ -1094,30 +1085,40 @@ class Worker(QRunnable):
                                         self.pending_message = 0
                                         await asyncio.sleep(0.02)
 
+                                    mess_sender = message.from_id.user_id
+                                    if mess_sender in self.message_data:
+                                        self.message_data[mess_sender] = self.message_data[mess_sender] + 1
+                                    elif mess_sender not in self.message_data:
+                                        self.message_data[mess_sender] = 1
+
                                 except Exception as e:
-                                    self.pending += self.mess_value
-                                    if self.pending_message > 5:
-                                        self.signal.progress.emit(
-                                            [self.bar, self.total_mess,self.counter, self.thread_num])
-                                        self.pending_message = 0
                                     exc_type, exc_obj, exc_tb = sys.exc_info()
                                     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                                     print(exc_type, fname, exc_tb.tb_lineno, e)
-                                    pass
+
+
+                                try:
+                                    mess_text = message.message
+                                    mess_len = len(str(mess_text))
+                                    if mess_len == 0:
+                                        mess_len = 1    #if it's a sticker len is going to be 0, so make it 1
+                                    self.signal.mess_char.emit([message.from_id.user_id, mess_len])
+                                except Exception as e:
+                                    exc_type, exc_obj, exc_tb = sys.exc_info()
+                                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+
+                                
                             except Exception as e:
                                 exc_type, exc_obj, exc_tb = sys.exc_info()
                                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                                 print(exc_type, fname, exc_tb.tb_lineno, e)
-                                pass
-                    #print(a)
+
                     if self.bar != self.max_bar and self.multi_sess == False:
                         self.bar = self.max_bar
-                        self.pending = self.pending - int(self.pending)
                     
-                    else:
-                        if self.bar != self.max_bar and self.multi_sess == True:
+                    elif self.bar != self.max_bar and self.multi_sess == True:
                             self.bar = self.max_bar
-                            self.pending = self.pending - int(self.pending)
+
                     self.signal.progress.emit(
                         [self.bar, self.total_mess, self.counter, self.thread_num])
 
@@ -1125,7 +1126,7 @@ class Worker(QRunnable):
                     total_kpi = 0
                     self.message_data = dict(
                         sorted(self.message_data.items(),
-                               key=lambda item: item[1]))
+                            key=lambda item: item[1]))
 
                     if self.create_log is True:
                         self.signal.list_size.emit(len(self.message_data))
@@ -1142,7 +1143,7 @@ class Worker(QRunnable):
                                     full_name += f' {last_name}'
                                 total_all += self.message_data[sender]
                                 print(full_name, username,
-                                      self.message_data[sender])
+                                    self.message_data[sender])
                                 row_data = [
                                     full_name, username,
                                     self.message_data[sender],
