@@ -25,10 +25,12 @@ from id_manager import *
 #[x] change app name to Telecounter(top text)
 #[ ] add extra features to delete joining messages
 #[x] block session if searching private group and not joined
-#[ ] Not working properly with ending message double session  
-#[ ] Add a predetermined total message to all session
+#[x] Not working properly with ending message double session  
+#[x] Add a predetermined total message to all session: unnecessary
 #[ ] add a requirements.txt
 #[ ] after counting check somewhere else and make bar 100%
+#[ ] keep buttons disables until all threads have stopped working
+#[ ] show counting + finishing log message both at once
 
 version = 'v1.2'
 new_version = ''
@@ -649,15 +651,15 @@ class main_form(QMainWindow):
             self.counting_time -= 1
         
     def data_distributor(self, list_data):
-        #print(
-        #    f'Bar Value: {list_data[0]}, Total Message: {list_data[1]}, Counter: {list_data[2]}')
+        print(
+            f'Bar Value: {list_data[0]}, Total Message: {list_data[1]}, Counter: {list_data[2]}')
         self.progress_bar(int(list_data[0]))
         self.label_changer(int(list_data[1]), int(list_data[2]))
         self.counting_label()
 
     def data_distributor_multi(self, list_data):
-        #print(
-        #    f'Bar Value: {list_data[0]}, Total Message: {list_data[1]}, Counter: {list_data[2]}')
+        print(
+            f'Bar Value: {list_data[0]}, Total Message: {list_data[1]}, Counter: {list_data[2]}')
         thread_number = int(list_data[3])
         self.cu_bar_value[thread_number] = int(list_data[0])
         self.cu_total_mess[thread_number] = int(list_data[1])
@@ -932,32 +934,11 @@ class main_form(QMainWindow):
                 parts_start[available_sess[i]] = new_starting
                 new_starting += part_value
                 parts_end[available_sess[i]] = new_starting-1
-
-
-
-        #for i in available_sess:
-        #    if i == available_sess[-1]:
-        #       parts_start[i] = self.group_starting
-        #       parts_end[i] = self.group_starting
-        #    else:
-        #        parts_start[i] = new_starting + part_value
-        #        new_starting += part_value
         
         message_value = 100 / (self.mess_id_latest - self.group_starting)
         
-        #for i in available_sess:
-        #    if i == available_sess[0]:
-        #        parts_end[i] = self.group_ending
-        #    else:
-
-            #if i == available_sess[-1]:
-            #    parts_end[available_sess[i]] = self.mess_id_latest 
-            #else:
-            #    parts_end[available_sess[i]] = parts_start[available_sess[i-1]]-1
-        #self.enable_widgets()
         for i in available_sess:
             thread_num += 1
-            print(self.group_name)
             self.worker = Worker(self.group_name, parts_start[i],
                              parts_end[i],
                              i, self.create_log, thread_num, len(available_sess), mess_value=message_value, multi_sess=True, max_bar=100/len(available_sess))
@@ -1026,13 +1007,12 @@ class Worker(QRunnable):
                     async for message in client.iter_messages(self.group_name,
                                         offset_id=self.group_ending):
                         
-
-                        print(f'Messgage ID: {message.id}, Group Starting: {self.group_starting}, Group Ending: {self.group_ending}, Thread Number: {self.thread_num}')
                         if int(message.id) < self.group_starting:
-                            print('here2')
-                            self.pending = self.max_bar
-                            self.total_mess += self.last_id - self.group_starting+1
-                            #print(self.thread_num, self.total_mess, self.last_id, message.id)
+                            if self.pending > self.max_bar:
+                                pass
+                            else:
+                                self.pending = self.max_bar
+                            self.total_mess += self.last_id - self.group_starting + 1
                             break
                             
                         elif message.id > self.group_ending:
@@ -1046,9 +1026,12 @@ class Worker(QRunnable):
 
                             try:
                                 try:
-                                    
+
                                     if int(message.id) == self.group_starting: 
-                                        self.pending = self.max_bar
+                                        if self.pending > self.max_bar:
+                                            pass
+                                        else:
+                                            self.pending += self.max_bar
                                         self.total_mess += self.last_id - self.group_starting+1
                                         try:
                                             if message.from_id.user_id in accounts:
@@ -1058,7 +1041,7 @@ class Worker(QRunnable):
                                         break
 
                                     else:
-                                        self.pending = self.mess_value * (self.last_id - message.id)
+                                        self.pending += self.mess_value * (self.last_id - message.id)
                                         self.total_mess += self.last_id - message.id
                                         self.last_id = message.id
                                         self.pending_message += 1
@@ -1094,7 +1077,7 @@ class Worker(QRunnable):
                                 except Exception as e:
                                     exc_type, exc_obj, exc_tb = sys.exc_info()
                                     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                                    print(exc_type, fname, exc_tb.tb_lineno, e)
+                                    #print(exc_type, fname, exc_tb.tb_lineno, e)
 
 
                                 try:
@@ -1111,9 +1094,11 @@ class Worker(QRunnable):
                             except Exception as e:
                                 exc_type, exc_obj, exc_tb = sys.exc_info()
                                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                                print(exc_type, fname, exc_tb.tb_lineno, e)
+                                #print(exc_type, fname, exc_tb.tb_lineno, e)
 
-                    if self.bar != self.max_bar and self.multi_sess == False:
+                    if self.bar > self.max_bar:
+                        pass
+                    elif self.bar != self.max_bar and self.multi_sess == False:
                         self.bar = self.max_bar
                     
                     elif self.bar != self.max_bar and self.multi_sess == True:
