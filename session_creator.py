@@ -22,7 +22,7 @@ class session_builder:
             api_hash = self.api_hash
             sess_name = self.sess_name
             tg_code = self.tg_code
-            phone = self.phone
+            phone = self.phone.replace(' ', '')
             password = self.tg_pass
             client = TelegramClient(sess_name, api_id, api_hash)
             await client.connect()
@@ -57,6 +57,7 @@ class session_builder:
         self.sess_name = self.ui.box_session_name.text()
         self.tg_code = self.ui.box_tg_code.text()
         self.phone = self.ui.box_phone.text()
+        self.phone = self.phone.replace(' ', '')
 
     def clear_boxes(self):
         self.ui.box_api_hash.clear()
