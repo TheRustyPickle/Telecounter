@@ -24,6 +24,7 @@ from id_manager import *
 #[ ] count message based on dates
 #[x] change app name to Telecounter(top text)
 #[ ] add extra features to delete joining messages
+#[ ] Fix log for multi session
 #[x] block session if searching private group and not joined
 #[x] Not working properly with ending message double session  
 #[x] Add a predetermined total message to all session: unnecessary
@@ -31,10 +32,11 @@ from id_manager import *
 #[ ] after counting check somewhere else and make bar 100%
 #[ ] keep buttons disables until all threads have stopped working
 #[ ] show counting + finishing log message both at once
+#[x] remove extra spaces on phone number at session creator
+#[ ] stop function when pressed exit
 
 version = 'v1.2'
 new_version = ''
-
 
 def version_check():  # for checking new releases on github
     global new_version
@@ -105,8 +107,7 @@ class main_form(QMainWindow):
         self.group_ending = 0
         self.cu_session = ''
         self.worker = ''
-        self.running = False
-        self.force_stop = 1
+        self.force_stop = 2
         self.counting_time = 1
         self.cu_dots = ''
         self.create_log = True
@@ -115,6 +116,9 @@ class main_form(QMainWindow):
         self.starting_paste = True
         self.ending_paste = True
         self.pri_group = False
+        self.running = False
+        self.finishing_log = False
+        self.counting = False
         self.total_row_all = 0
         self.kpi_log = {0: [], 1: [], 2: [], 3: [], 4: []}
         self.all_log = {0: [], 1: [], 2: [], 3: [], 4: []}
@@ -605,6 +609,8 @@ class main_form(QMainWindow):
         self.ui.button_add_user.setEnabled(False)
         self.ui.progressBar.setValue(0)
         self.running = True
+        self.counting = True
+        self.finishing_log = False
         self.mess_id_latest = 0
         self.kpi_log = {0: [], 1: [], 2: [], 3: [], 4: []}
         self.all_log = {0: [], 1: [], 2: [], 3: [], 4: []}
@@ -638,19 +644,29 @@ class main_form(QMainWindow):
         self.cu_session = ''
         self.running = False
         self.force_stop = 3
-        self.counting_time = 3
+        self.counting_time = 1
         self.cu_dots = ''
+
     def counting_label(self):
         if self.cu_dots == '....':
             self.cu_dots = ''
         if self.counting_time == 0:
             self.cu_dots += '.'
-            self.ui.statusBar().showMessage(f'Counting{self.cu_dots}')
+            if self.counting == True and self.finishing_log == True:
+                self.ui.statusBar().showMessage(f'Counting and Finishing Log{self.cu_dots}')
+
+            elif self.counting == True and self.finishing_log == False:
+                self.ui.statusBar().showMessage(f'Counting{self.cu_dots}')
+
+            elif self.counting == False and self.finishing_log == True:
+                self.ui.statusBar().showMessage(f'Finishing Log{self.cu_dots}')
+
             self.counting_time = 1
         else:
             self.counting_time -= 1
         
     def data_distributor(self, list_data):
+        self.counting = True
         print(
             f'Bar Value: {list_data[0]}, Total Message: {list_data[1]}, Counter: {list_data[2]}')
         self.progress_bar(int(list_data[0]))
@@ -658,6 +674,7 @@ class main_form(QMainWindow):
         self.counting_label()
 
     def data_distributor_multi(self, list_data):
+        self.counting = True
         print(
             f'Bar Value: {list_data[0]}, Total Message: {list_data[1]}, Counter: {list_data[2]}')
         thread_number = int(list_data[3])
@@ -716,11 +733,14 @@ class main_form(QMainWindow):
         self.ui.table_widget_2.setRowCount(len(self.kpi_log[0]))
 
     def row_amount(self, num):
+        self.counting = False
         self.ui.table_widget_1.setRowCount(num)
         self.ui.table_widget_2.setRowCount(5)
         self.total_row_all = num
 
     def set_row_data(self, data):
+        self.finishing_log = True
+        self.counting_label() 
         try:
             average_char = int(self.total_mess_char[int(data[4])] / int(data[2]))
         except:
@@ -751,15 +771,6 @@ class main_form(QMainWindow):
         self.all_log[2].append(str(data[2]))
         self.all_log[3].append(str(data[4]))
         self.all_log[4].append(str(average_char))
-
-        if self.cu_dots == '....':
-            self.cu_dots = ''
-        if self.counting_time == 0:
-            self.cu_dots += '.'
-            self.ui.statusBar().showMessage(f'Finishing Logs{self.cu_dots}')
-            self.counting_time = 1
-        else:
-            self.counting_time -= 1
 
     def set_row_data_kpi(self, data):
         try:
@@ -1006,7 +1017,6 @@ class Worker(QRunnable):
                     a = []
                     async for message in client.iter_messages(self.group_name,
                                         offset_id=self.group_ending):
-                        
                         if int(message.id) < self.group_starting:
                             if self.pending > self.max_bar:
                                 pass
