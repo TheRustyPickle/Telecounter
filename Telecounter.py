@@ -29,14 +29,15 @@ from id_manager import *
 #[x] Not working properly with ending message double session  
 #[x] Add a predetermined total message to all session: unnecessary
 #[ ] add a requirements.txt
-#[ ] after counting check somewhere else and make bar 100%
-#[ ] keep buttons disables until all threads have stopped working
-#[ ] show counting + finishing log message both at once
+#[x] after counting check somewhere else and make bar 100%
+#[x] keep buttons disables until all threads have stopped working
+#[x] show counting + finishing log message both at once
 #[x] remove extra spaces on phone number at session creator
-#[ ] stop function when pressed exit
+#[x] stop function when pressed exit
 
 version = 'v1.2'
 new_version = ''
+stop_process = False
 
 def version_check():  # for checking new releases on github
     global new_version
@@ -452,6 +453,7 @@ class main_form(QMainWindow):
             self.ending_paste = False
 
     def closeEvent(self, event):
+        global stop_process
         # show warning on clicking close/exit
         close = QMessageBox()
         if self.running is True:
@@ -464,6 +466,7 @@ class main_form(QMainWindow):
                 close = close.exec()
                 event.ignore()
             else:
+                stop_process = True
                 event.accept()
         else:
             close.setText("You sure?")
@@ -599,7 +602,6 @@ class main_form(QMainWindow):
             self.ui.table_widget_2.removeRow(0)
         self.ui.table_widget_1.setRowCount(5)
         self.ui.table_widget_2.setRowCount(5)
-        self.ui.progressBar.setValue(0)
         self.ui.Button_count.setEnabled(False)
         self.ui.button_create_sess.setEnabled(False)
         self.ui.button_send_code.setEnabled(False)
@@ -607,25 +609,9 @@ class main_form(QMainWindow):
         self.ui.button_save.setEnabled(False)
         self.ui.button_remove.setEnabled(False)
         self.ui.button_add_user.setEnabled(False)
-        self.ui.progressBar.setValue(0)
         self.running = True
         self.counting = True
         self.finishing_log = False
-        self.mess_id_latest = 0
-        self.kpi_log = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.all_log = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.kpi_cells = {}
-        self.all_cells = {}
-        self.total_mess_char = {}
-        self.largest_text_all = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
-        self.largest_text_kpi = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
-        self.largest_string_all = {0: '', 1: '', 2: '', 3: '', 4: ''}
-        self.largest_string_kpi = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.cu_selected_all = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.cu_selected_kpi = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.cu_bar_value = {}
-        self.cu_total_mess = {}
-        self.cu_kpi_mess = {}
         self.force_stop = 2
 
     def enable_widgets(self):
@@ -648,6 +634,9 @@ class main_form(QMainWindow):
         self.cu_dots = ''
 
     def counting_label(self):
+        if self.ui.Button_count.isEnabled() == True:
+            if self.running == True or self.finishing_log == True:
+                self.disable_widgets()
         if self.cu_dots == '....':
             self.cu_dots = ''
         if self.counting_time == 0:
@@ -697,7 +686,6 @@ class main_form(QMainWindow):
 
         for i in self.cu_kpi_mess:
             tot_kpi += self.cu_kpi_mess[i]
-
         self.progress_bar(bar_value)
         self.label_changer(tot_mess, tot_kpi)
         self.counting_label()
@@ -739,6 +727,9 @@ class main_form(QMainWindow):
         self.total_row_all = num
 
     def set_row_data(self, data):
+        if self.ui.Button_count.isEnabled() == True:
+            if self.running == True or self.finishing_log == True:
+                self.disable_widgets()
         self.finishing_log = True
         self.counting_label() 
         try:
@@ -820,6 +811,23 @@ class main_form(QMainWindow):
         self.reload_kpi()
         self.session_detector()
         self.disable_widgets()
+
+        self.ui.progressBar.setValue(0)
+        self.mess_id_latest = 0
+        self.kpi_log = {0: [], 1: [], 2: [], 3: [], 4: []}
+        self.all_log = {0: [], 1: [], 2: [], 3: [], 4: []}
+        self.kpi_cells = {}
+        self.all_cells = {}
+        self.total_mess_char = {}
+        self.largest_text_all = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
+        self.largest_text_kpi = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
+        self.largest_string_all = {0: '', 1: '', 2: '', 3: '', 4: ''}
+        self.largest_string_kpi = {0: [], 1: [], 2: [], 3: [], 4: []}
+        self.cu_selected_all = {0: [], 1: [], 2: [], 3: [], 4: []}
+        self.cu_selected_kpi = {0: [], 1: [], 2: [], 3: [], 4: []}
+        self.cu_bar_value = {}
+        self.cu_total_mess = {}
+        self.cu_kpi_mess = {}
 
         #[x] break block here based on whether multi client is selected
         if self.multi_sess_selected == True:
@@ -947,12 +955,16 @@ class main_form(QMainWindow):
                 parts_end[available_sess[i]] = new_starting-1
         
         message_value = 100 / (self.mess_id_latest - self.group_starting)
-        
+        final_part_value = 100
         for i in available_sess:
             thread_num += 1
+            part_bar = int(100/len(available_sess))
+            if i == available_sess[-1]:
+                part_bar = final_part_value
             self.worker = Worker(self.group_name, parts_start[i],
                              parts_end[i],
-                             i, self.create_log, thread_num, len(available_sess), mess_value=message_value, multi_sess=True, max_bar=100/len(available_sess))
+                             i, self.create_log, thread_num, len(available_sess), mess_value=message_value, multi_sess=True, max_bar=part_bar)
+            final_part_value -= part_bar
             self.worker.signal.progress.connect(self.data_distributor_multi)
             self.worker.signal.list_size.connect(self.row_amount)
             self.worker.signal.row_data.connect(self.set_row_data)
@@ -1004,6 +1016,7 @@ class Worker(QRunnable):
     @pyqtSlot()
     def run(self):
         async def kpi_counter():
+            global stop_process
             client = TelegramClient(self.cu_session, api_id, api_hash)
             await client.connect()
             me = await client.get_me()
@@ -1017,6 +1030,8 @@ class Worker(QRunnable):
                     a = []
                     async for message in client.iter_messages(self.group_name,
                                         offset_id=self.group_ending):
+                        if stop_process == True:
+                            return
                         if int(message.id) < self.group_starting:
                             if self.pending > self.max_bar:
                                 pass
@@ -1127,6 +1142,8 @@ class Worker(QRunnable):
                         self.signal.list_size.emit(len(self.message_data))
 
                         for sender in self.message_data:
+                            if stop_process == True:
+                                return
                             try:
                                 entity = await client.get_entity(sender)
                                 id_num = entity.id
