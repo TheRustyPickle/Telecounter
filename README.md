@@ -4,7 +4,7 @@ This was created for personal use and to make my life easier
 
 <h4> How to run</h4>
 
-Download the executable from latest release for one click runnable or download all files and run Telecounter.py with required library
+Download the executable from latest release for one click runnable or download source from Release and run Telecounter.py with required library
 
 GUI Design tested only on Windows and Arch Linux.
 
