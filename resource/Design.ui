@@ -69,21 +69,29 @@ QScrollBar::handle:vertical{
 QScrollBar::add-line:horizontal {
       border: none;
       background: none;
+	  width: 0px;
+	  height: 0px;
 }
 
 QScrollBar::add-line:vertical {
       border: none;
       background: none;
+	  width: 0px;
+	  height: 0px;
 }
 
 QScrollBar::sub-line:horizontal {
       border: none;
       background: none;
+	  width: 0px;
+	  height: 0px;
 }
 
 QScrollBar::sub-line:vertical {
       border: none;
       background: none;
+	  width: 0px;
+	  height: 0px;
 }
 
 </string>
