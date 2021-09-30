@@ -35,11 +35,12 @@ from id_manager import *
 #[x] remove extra spaces on phone number at session creator
 #[x] stop function when pressed exit
 #[x] re-edit copying function
-#[ ] cancel copying if no row is selected
+#[x] cancel copying if no row is selected
+#[x] find out what widget is selected and based on that make use of ctrl c
 #[x] log is not showing proper total message or KPI
 #[x] fix log placement
 
-version = 'v1.2'
+version = 'v2.0'
 new_version = ''
 stop_process = False
 
@@ -152,14 +153,15 @@ class main_form(QMainWindow):
         self.timer = QTimer()
         self.thread_timer = QTimer()
         self.row_timer = QTimer()
+        self.clear_statusbar = QTimer()
         self.row_timer.setInterval(500)
-        self.row_timer.timeout.connect(self.row_data_setter)
-        self.timer.timeout.connect(self.check_update)
         self.timer.setInterval(10000)
+        self.clear_statusbar.setInterval(3000)
+        self.clear_statusbar.timeout.connect(self.empty_statusbar)
+        self.timer.timeout.connect(self.check_update)
+        self.row_timer.timeout.connect(self.row_data_setter)
         self.timer.start()
         self.show()
-
-        # self.check_update()
 
     def connections(self):  # connect all events
         self.ui.button_create_sess.clicked.connect(self.sess.sess_creator)
@@ -173,8 +175,6 @@ class main_form(QMainWindow):
         self.ui.button_save.clicked.connect(self.manager.list_save)
         self.ui.box_ending_mess.textChanged.connect(self.text_changed_ending)
         self.ui.box_starting_mess.textChanged.connect(self.text_changed_starting)
-        #self.ui.table_widget_1.selectionModel().selectionChanged.connect(self.selected_rows_1)
-        #self.ui.table_widget_2.selectionModel().selectionChanged.connect(self.selected_rows_2)
         self.ui.tabWidget.currentChanged.connect(self.tab_changed)
         self.ui.Button_count.clicked.connect(self.data_parser)
         self.ui.button_exit.clicked.connect(self.exiting)
@@ -210,27 +210,33 @@ class main_form(QMainWindow):
             self.w.show()
         self.timer.stop()
 
+    def empty_statusbar(self):
+        self.clear_statusbar.stop()
+        self.ui.statusBar().clearMessage()
+
     def sorting_event_1(self):
         self.ui.table_widget_1.clearSelection()
     
     def sorting_event_2(self):
         self.ui.table_widget_2.clearSelection()
 
-    def keyPressEvent(self, event):
-        if QKeySequence(event.key()+int(event.modifiers())) == QKeySequence("Ctrl+C"):
-            self.all_cell_selected = {}
-            self.kpi_cell_selected = {}
-            self.largest_text_all = {}
-            self.largest_text_kpi = {}
-            full_text = ''
-            
+    def cell_copier(self):
+        self.all_cell_selected = {}
+        self.kpi_cell_selected = {}
+        self.largest_text_all = {}
+        self.largest_text_kpi = {}
+        full_text = ''
+        current_tab = self.ui.tabWidget.currentIndex() 
+        current_focus = QtWidgets.QApplication.focusWidget().objectName()
+        
+        if current_focus == 'table_widget_1':
             for i in self.ui.table_widget_1.selectedItems():
                 row_num = i.row()
                 col_num = i.column()
                 cell_text = i.text()
                 if row_num not in self.all_cell_selected:
-                    self.all_cell_selected[row_num] = []
-                self.all_cell_selected[row_num].append({col_num: cell_text})
+                    self.all_cell_selected[row_num] = {}
+                self.all_cell_selected[row_num][col_num] = cell_text
 
                 if col_num not in self.largest_text_all:
                     self.largest_text_all[col_num] = 0
@@ -238,51 +244,53 @@ class main_form(QMainWindow):
                 if len(cell_text) > self.largest_text_all[col_num]:
                     self.largest_text_all[col_num] = len(cell_text)
 
+        if current_focus == 'table_widget_2':
             for i in self.ui.table_widget_2.selectedItems():
                 row_num = i.row()
                 col_num = i.column()
                 cell_text = i.text()
                 if row_num not in self.kpi_cell_selected:
-                    self.kpi_cell_selected[row_num] = []
-                self.kpi_cell_selected[row_num].append({col_num: cell_text})
+                    self.kpi_cell_selected[row_num] = {}
+                self.kpi_cell_selected[row_num][col_num] = cell_text
 
                 if col_num not in self.largest_text_kpi:
                     self.largest_text_kpi[col_num] = 0
                 
                 if len(cell_text) > self.largest_text_kpi[col_num]:
                     self.largest_text_kpi[col_num] = len(cell_text)
-            
-            self.all_cell_selected = dict(sorted(self.all_cell_selected.items()))
-            self.largest_text_all = dict(sorted(self.largest_text_all.items()))
-            self.kpi_cell_selected = dict(sorted(self.kpi_cell_selected.items()))
-            self.largest_text_kpi = dict(sorted(self.largest_text_kpi.items()))
-            
-            starting_point_all = 0
-            starting_point_kpi = 0
-            for cell in self.all_cell_selected:
-                for i in self.largest_text_all:
-                    try:
-                        text_to_add = self.all_cell_selected[cell][starting_point_all][i]
-                        full_text += f'{text_to_add}'.ljust(self.largest_text_all[i] + 1)
-                    except Exception as e:
-                        print(e)
-                    starting_point_all += 1
-                starting_point_all = 0
-                full_text += '\n'
+        
+        self.all_cell_selected = dict(sorted(self.all_cell_selected.items()))
+        self.largest_text_all = dict(sorted(self.largest_text_all.items()))
+        self.kpi_cell_selected = dict(sorted(self.kpi_cell_selected.items()))
+        self.largest_text_kpi = dict(sorted(self.largest_text_kpi.items()))
+        
+        for i in self.all_cell_selected:
+            self.all_cell_selected[i] = dict(sorted(self.all_cell_selected[i].items()))
 
-            for cell in self.kpi_cell_selected:
-                for i in self.largest_text_kpi:
-                    try:
-                        text_to_add = self.kpi_cell_selected[cell][starting_point_kpi][i]
-                        full_text += f'{text_to_add}'.ljust(self.largest_text_kpi[i] + 1)
-                    except Exception as e:
-                        print(e)
-                    starting_point_kpi += 1
-                starting_point_kpi = 0
-                full_text += '\n'
+        for i in self.kpi_cell_selected:
+            self.kpi_cell_selected[i] = dict(sorted(self.kpi_cell_selected[i].items()))
 
-            pyperclip.copy(full_text)
-            self.ui.statusBar().showMessage(f'Cells Copied')
+        for cell in self.all_cell_selected:
+            for dat in self.all_cell_selected[cell]:
+                text_to_add = self.all_cell_selected[cell][dat]
+                full_text += f'{text_to_add}'.ljust(self.largest_text_all[dat] + 1)
+            full_text += '\n'
+
+        for cell in self.kpi_cell_selected:
+            for dat in self.kpi_cell_selected[cell]:
+                text_to_add = self.kpi_cell_selected[cell][dat]
+                full_text += f'{text_to_add}'.ljust(self.largest_text_kpi[dat] + 1)
+            full_text += '\n'
+
+        if self.all_cell_selected != {} or self.kpi_cell_selected  != {}:
+            if current_tab == 1:
+                pyperclip.copy(full_text)
+                self.ui.statusBar().showMessage(f'Cells Copied')
+                self.clear_statusbar.start()
+
+    def keyPressEvent(self, event):
+        if QKeySequence(event.key()+int(event.modifiers())) == QKeySequence("Ctrl+C"):
+            self.cell_copier()
 
     def tab_changed(self):  # resize form if message log tab selected
         if self.ui.tabWidget.currentIndex() == 1:
