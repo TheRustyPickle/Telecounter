@@ -34,7 +34,8 @@ from id_manager import *
 #[x] show counting + finishing log message both at once
 #[x] remove extra spaces on phone number at session creator
 #[x] stop function when pressed exit
-#[ ] re-edit copying function
+#[x] re-edit copying function
+#[ ] cancel copying if no row is selected
 #[x] log is not showing proper total message or KPI
 #[x] fix log placement
 
@@ -125,19 +126,12 @@ class main_form(QMainWindow):
         self.running = False
         self.finishing_log = False
         self.counting = False
-        self.total_row_all = 0
-        self.kpi_log = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.all_log = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.kpi_cells = {}
-        self.all_cells = {}
+        self.all_cell_selected = {}
+        self.kpi_cell_selected = {}
         self.finishing_data = {}
         self.total_mess_char = {}
-        self.largest_text_all = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.largest_text_kpi = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.largest_string_all = {0: '', 1: '', 2: '', 3: '', 4: ''}
-        self.largest_string_kpi = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.cu_selected_all = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.cu_selected_kpi = {0: [], 1: [], 2: [], 3: [], 4: []}
+        self.largest_text_all = {}
+        self.largest_text_kpi = {}
         self.all_log_row = {}
         self.kpi_log_row = {}
 
@@ -179,8 +173,8 @@ class main_form(QMainWindow):
         self.ui.button_save.clicked.connect(self.manager.list_save)
         self.ui.box_ending_mess.textChanged.connect(self.text_changed_ending)
         self.ui.box_starting_mess.textChanged.connect(self.text_changed_starting)
-        self.ui.table_widget_1.selectionModel().selectionChanged.connect(self.selected_rows_1)
-        self.ui.table_widget_2.selectionModel().selectionChanged.connect(self.selected_rows_2)
+        #self.ui.table_widget_1.selectionModel().selectionChanged.connect(self.selected_rows_1)
+        #self.ui.table_widget_2.selectionModel().selectionChanged.connect(self.selected_rows_2)
         self.ui.tabWidget.currentChanged.connect(self.tab_changed)
         self.ui.Button_count.clicked.connect(self.data_parser)
         self.ui.button_exit.clicked.connect(self.exiting)
@@ -217,96 +211,75 @@ class main_form(QMainWindow):
         self.timer.stop()
 
     def sorting_event_1(self):
-        self.all_log = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.cu_selected_all = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.largest_string_all = {0: '', 1: '', 2: '', 3: '', 4: ''}
-        self.largest_text_all = {0: 0, 1: 0, 2: 0, 3: 0, 3: 0}
-        self.all_cells = {}
-
-        # forget all previous saved data, clear selection on sorting
-
         self.ui.table_widget_1.clearSelection()
-        for column in range(5):
-            for row in range(self.total_row_all):
-                try:
-                    cu_value = str(
-                        self.ui.table_widget_1.item(row, column).text())
-                    self.all_log[column].append(cu_value)
-                except Exception:
-                    pass
-
+    
     def sorting_event_2(self):
-        self.kpi_log = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.cu_selected_kpi = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.largest_string_kpi = {0: '', 1: '', 2: '', 3: '', 4: ''}
-        self.largest_text_kpi = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
-        self.kpi_cells = {}
-
-        # forget all previous saved data, clear selection on sorting
-
         self.ui.table_widget_2.clearSelection()
-        for column in range(5):
-            for row in range(self.total_row_all):
-                try:
-                    cu_value = str(
-                        self.ui.table_widget_2.item(row, column).text())
-                    self.kpi_log[column].append(cu_value)
-                except Exception:
-                    pass
 
     def keyPressEvent(self, event):
         if QKeySequence(event.key()+int(event.modifiers())) == QKeySequence("Ctrl+C"):
-
-            # sort selected cells by row and column on both tables
-            self.all_cells = dict(sorted(self.all_cells.items()))
-            for i in self.all_cells:
-                self.all_cells[i] = dict(sorted(self.all_cells[i].items()))
-
-            self.kpi_cells = dict(sorted(self.kpi_cells.items()))
-            for i in self.kpi_cells:
-                self.kpi_cells[i] = dict(sorted(self.kpi_cells[i].items()))
-
+            self.all_cell_selected = {}
+            self.kpi_cell_selected = {}
+            self.largest_text_all = {}
+            self.largest_text_kpi = {}
             full_text = ''
-            line_added = False
+            
+            for i in self.ui.table_widget_1.selectedItems():
+                row_num = i.row()
+                col_num = i.column()
+                cell_text = i.text()
+                if row_num not in self.all_cell_selected:
+                    self.all_cell_selected[row_num] = []
+                self.all_cell_selected[row_num].append({col_num: cell_text})
 
-            # go through all selected cells
-            # and add spaces to keep the lines aligned on copy/ctrl + c
-            # amount of spaces is determined by the largest text selected
-            # on that specific column
+                if col_num not in self.largest_text_all:
+                    self.largest_text_all[col_num] = 0
+                
+                if len(cell_text) > self.largest_text_all[col_num]:
+                    self.largest_text_all[col_num] = len(cell_text)
 
-            for i in self.all_cells:
-                if self.all_cells[i] != {}:
+            for i in self.ui.table_widget_2.selectedItems():
+                row_num = i.row()
+                col_num = i.column()
+                cell_text = i.text()
+                if row_num not in self.kpi_cell_selected:
+                    self.kpi_cell_selected[row_num] = []
+                self.kpi_cell_selected[row_num].append({col_num: cell_text})
+
+                if col_num not in self.largest_text_kpi:
+                    self.largest_text_kpi[col_num] = 0
+                
+                if len(cell_text) > self.largest_text_kpi[col_num]:
+                    self.largest_text_kpi[col_num] = len(cell_text)
+            
+            self.all_cell_selected = dict(sorted(self.all_cell_selected.items()))
+            self.largest_text_all = dict(sorted(self.largest_text_all.items()))
+            self.kpi_cell_selected = dict(sorted(self.kpi_cell_selected.items()))
+            self.largest_text_kpi = dict(sorted(self.largest_text_kpi.items()))
+            
+            starting_point_all = 0
+            starting_point_kpi = 0
+            for cell in self.all_cell_selected:
+                for i in self.largest_text_all:
                     try:
-                        for a in self.all_cells[i]:
-                            if self.all_cells[i][a] != []:
-                                for x in self.all_cells[i][a]:
-                                    full_text += f'{x}'.ljust(self.largest_text_all[a])
-                                    line_added = True
-                            else:
-                                line_added = False
-                        if line_added is True:
-                            full_text += '\n'
+                        text_to_add = self.all_cell_selected[cell][starting_point_all][i]
+                        full_text += f'{text_to_add}'.ljust(self.largest_text_all[i] + 1)
                     except Exception as e:
                         print(e)
+                    starting_point_all += 1
+                starting_point_all = 0
+                full_text += '\n'
 
-            line_added = False
-            for i in self.kpi_cells:
-                if self.kpi_cells[i] != {}:
+            for cell in self.kpi_cell_selected:
+                for i in self.largest_text_kpi:
                     try:
-                        for a in self.kpi_cells[i]:
-                            if self.kpi_cells[i][a] != []:
-                                for x in self.kpi_cells[i][a]:
-                                    if x is not None:
-                                        full_text += f'{x}'.ljust(self.largest_text_kpi[a])
-                                        line_added = True
-                                    else:
-                                        line_added = False
-                            else:
-                                line_added = False
-                        if line_added is True:
-                            full_text += '\n'
+                        text_to_add = self.kpi_cell_selected[cell][starting_point_kpi][i]
+                        full_text += f'{text_to_add}'.ljust(self.largest_text_kpi[i] + 1)
                     except Exception as e:
                         print(e)
+                    starting_point_kpi += 1
+                starting_point_kpi = 0
+                full_text += '\n'
 
             pyperclip.copy(full_text)
             self.ui.statusBar().showMessage(f'Cells Copied')
@@ -316,130 +289,6 @@ class main_form(QMainWindow):
             self.resize(850, 400)
         else:
             self.resize(400, 350)
-
-    def selected_rows_1(self, selected, deselected):
-        # save row number, column number and the cell text on select
-        for i in selected.indexes():
-            try:
-                if int(i.row()) in self.all_cells:
-                    if int(i.column()) not in self.all_cells[int(i.row())]:
-                        self.all_cells[int(i.row())][int(i.column())] = []
-                    self.all_cells[int(i.row())][int(i.column())].append(
-                        self.all_log[int(i.column())][int(i.row())])
-                elif int(i.row()) not in self.all_cells:
-                    self.all_cells[int(i.row())] = {}
-                    if int(i.column()) not in self.all_cells[int(i.row())]:
-                        self.all_cells[int(i.row())][int(i.column())] = []
-                    self.all_cells[int(i.row())][int(i.column())].append(
-                        self.all_log[int(i.column())][int(i.row())])
-
-                # keep the largest text length in check for every selection
-
-                cu_value = str(self.ui.table_widget_1.item(
-                    i.row(), i.column()).text())
-                self.cu_selected_all[i.column()].append(cu_value)
-                if len(cu_value) >= self.largest_text_all[int(i.column())]:
-                    self.largest_text_all[int(i.column())] = len(cu_value) + 1
-                    self.largest_string_all[i.column()] = cu_value
-
-            except Exception as e:
-                print(e)
-                exc_type, exc_obj, exc_tb = sys.exc_info()
-                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                #print(exc_type, fname, exc_tb.tb_lineno)
-
-        for i in deselected.indexes():
-            try:
-                if self.all_cells == {}:
-                    pass
-                else:
-
-                    # remove from saved selected cells and check whether
-                    # the largest text length changed
-
-                    try:
-                        del self.all_cells[int(i.row())][int(i.column())]
-                    except Exception:
-                        self.all_cells = {}
-
-                    cu_value = str(self.ui.table_widget_1.item(
-                        i.row(), i.column()).text())
-                    try:
-                        self.cu_selected_all[int(i.column())].remove(cu_value)
-                    except Exception:
-                        self.cu_selected_all = {
-                            0: [], 1: [], 2: [], 3: [], 4: []}
-
-                    self.largest_string_all[i.column()] = ''
-                    self.largest_text_all[int(i.column())] = 0
-
-                    for x in self.cu_selected_all[i.column()]:
-                        if len(x) >= len(self.largest_string_all[i.column()]):
-                            self.largest_string_all[i.column()] = x
-                            self.largest_text_all[int(i.column())] = len(x) + 1
-            except Exception as e:
-                print(e)
-                exc_type, exc_obj, exc_tb = sys.exc_info()
-                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                #print(exc_type, fname, exc_tb.tb_lineno)
-
-    def selected_rows_2(self, selected, deselected):
-        for i in selected.indexes():
-            try:
-                if int(i.row()) in self.kpi_cells:
-                    if int(i.column()) not in self.kpi_cells[int(i.row())]:
-                        self.kpi_cells[int(i.row())][int(i.column())] = []
-                    self.kpi_cells[int(i.row())][int(i.column())].append(
-                        self.kpi_log[int(i.column())][int(i.row())])
-                elif int(i.row()) not in self.kpi_cells:
-                    self.kpi_cells[int(i.row())] = {}
-                    if int(i.column()) not in self.kpi_cells[int(i.row())]:
-                        self.kpi_cells[int(i.row())][int(i.column())] = []
-                    self.kpi_cells[int(i.row())][int(i.column())].append(
-                        self.kpi_log[int(i.column())][int(i.row())])
-
-                cu_value = str(self.ui.table_widget_2.item(
-                    i.row(), i.column()).text())
-                self.cu_selected_kpi[i.column()].append(cu_value)
-                if len(cu_value) >= self.largest_text_kpi[int(i.column())]:
-                    self.largest_text_kpi[int(i.column())] = len(cu_value) + 1
-                    self.largest_string_kpi[i.column()] = cu_value
-            except Exception as e:
-                print(e)
-                exc_type, exc_obj, exc_tb = sys.exc_info()
-                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                #print(exc_type, fname, exc_tb.tb_lineno)
-
-        for i in deselected.indexes():
-            try:
-                if self.all_cells == {}:
-                    pass
-                else:
-                    # self.kpi_cells[int(i.row())][int(i.column())].remove(self.kpi_log[int(i.column())][int(i.row())])
-                    try:
-                        del self.kpi_cells[int(i.row())][int(i.column())]
-                    except Exception:
-                        self.kpi_cells = {}
-
-                    cu_value = str(self.ui.table_widget_2.item(i.row(), i.column()).text())
-                    try:
-                        self.cu_selected_kpi[int(i.column())].remove(cu_value)
-                    except Exception:
-                        self.cu_selected_kpi = {0: [], 1: [], 2: [], 3: [], 4: []}
-
-                    # if cu_value == self.largest_string_kpi[i.column()]:
-                    self.largest_string_kpi[i.column()] = ''
-                    self.largest_text_kpi[int(i.column())] = 0
-
-                    for x in self.cu_selected_kpi[i.column()]:
-                        if len(x) >= len(self.largest_string_kpi[i.column()]):
-                            self.largest_string_kpi[i.column()] = x
-                            self.largest_text_kpi[int(i.column())] = len(x) + 1
-            except Exception as e:
-                print(e)
-                exc_type, exc_obj, exc_tb = sys.exc_info()
-                fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                print(exc_type, fname, exc_tb.tb_lineno)
 
     def text_changed_starting(self):
         # if text box empty, paste from clipboard on click
@@ -780,8 +629,8 @@ class main_form(QMainWindow):
             self.ui.statusBar().clearMessage()
             self.ui.total_2.setText(f'Total Message: {new_all_num}')
             self.ui.total_1.setText(f'Total KPI: {new_kpi_num}')
-        self.ui.table_widget_2.setRowCount(len(self.kpi_log[0]))
-        self.ui.table_widget_1.setRowCount(len(self.all_log[0]))
+        self.ui.table_widget_2.setRowCount(self.kpi_latest_row_num)
+        self.ui.table_widget_1.setRowCount(self.all_latest_row_num)
         self.row_timer.start()
 
     def row_amount(self, data):
@@ -810,16 +659,7 @@ class main_form(QMainWindow):
         except:
             average_char = 0
             self.all_log_row[data[4]].append(average_char)
-
-        if str(data[4]) in self.all_log[3]:
-            pass
-        else:
-            self.all_log[0].append(str(data[0]))
-            self.all_log[1].append(str(data[1]))
-            self.all_log[2].append(str(self.all_log_row[data[4]][2]))
-            self.all_log[3].append(str(data[4]))
-            self.all_log[4].append(str(average_char))
-        self.ui.table_widget_1.setRowCount(len(self.all_log[0])+1)
+        self.ui.table_widget_1.setRowCount(self.all_latest_row_num)
 
     def set_row_data_kpi(self, data):
         try:
@@ -837,16 +677,7 @@ class main_form(QMainWindow):
             except:
                 average_char = 0
                 self.kpi_log_row[data[4]].append(average_char)
-
-            if str(data[4]) in self.kpi_log[3]:
-                pass
-            else:
-                self.kpi_log[0].append(str(data[0]))
-                self.kpi_log[1].append(str(data[1]))
-                self.kpi_log[2].append(str(self.kpi_log_row[data[4]][2]))
-                self.kpi_log[3].append(str(data[4]))
-                self.kpi_log[4].append(str(average_char))
-            self.ui.table_widget_2.setRowCount(len(self.kpi_log[0])+1)
+            self.ui.table_widget_2.setRowCount(self.kpi_latest_row_num)
         except Exception as e:
             print(e)
 
@@ -878,16 +709,7 @@ class main_form(QMainWindow):
         self.mess_id_latest = 0
         self.all_latest_row_num = 0
         self.kpi_latest_row_num = 0
-        self.kpi_log = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.all_log = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.kpi_cells = {}
-        self.all_cells = {}
         self.total_mess_char = {}
-        self.largest_text_kpi = {0: 0, 1: 0, 2: 0, 3: 0, 4: 0}
-        self.largest_string_all = {0: '', 1: '', 2: '', 3: '', 4: ''}
-        self.largest_string_kpi = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.cu_selected_all = {0: [], 1: [], 2: [], 3: [], 4: []}
-        self.cu_selected_kpi = {0: [], 1: [], 2: [], 3: [], 4: []}
         self.cu_bar_value = {}
         self.cu_total_mess = {}
         self.cu_kpi_mess = {}
