@@ -103,7 +103,7 @@ selection-background-color: #33FF90 ;
 
 QListWidget::item:focus
 {
-selection-background-color: #3DD080;
+background-color: #3DD080;
 }
 
 QListWidget::item:selected
@@ -111,9 +111,9 @@ QListWidget::item:selected
 selection-background-color: #3DD080;
 }
 
-QListWidget::item:hover
+QListWidget::item:selected:hover
 {
-selection-background-color: #33FF90 ;
+background-color: #33FF90 ;
 }
 
 QListWidget::item:!selected:hover
@@ -2336,7 +2336,7 @@ Unlock buttons
      <x>0</x>
      <y>0</y>
      <width>650</width>
-     <height>24</height>
+     <height>23</height>
     </rect>
    </property>
   </widget>
