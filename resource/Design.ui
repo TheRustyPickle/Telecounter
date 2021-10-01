@@ -30,7 +30,12 @@
    <property name="styleSheet">
     <string notr="true">QWidget{
 selection-background-color: #3DD080;}
-</string>
+
+QLineEdit:focus{
+background-color: #3DD080;}
+
+QComboBox:focus{
+background-color: #3DD080;}</string>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout_3">
     <item>
@@ -41,8 +46,39 @@ selection-background-color: #3DD080;}
         <height>16777215</height>
        </size>
       </property>
+      <property name="font">
+       <font>
+        <pointsize>12</pointsize>
+       </font>
+      </property>
       <property name="styleSheet">
        <string notr="true">QTabWidget::tab-bar {alignment: center;
+}
+
+QTabBar::tab {
+
+    border: 2px solid #C4C4C3;
+    border-bottom-color: #C4C4C3; /* same as the pane color */
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+    min-width: 8ex;
+    padding: 2px;
+}
+
+QTabBar::tab:selected, QTabBar::tab:hover {
+    background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,
+                                stop: 0 #8BFFB4, stop: 0.4 #8BFFB4,
+                                stop: 0.5 #8BFFB4, stop: 1.0 #8BFFB4);
+}
+
+QTabBar::tab:selected {
+	background-color: #3DD080;
+    border-color: #3DD080;
+    border-bottom-color: #3DD080; 
+}
+
+QTabBar::tab:!selected {
+    margin-top: 2px;
 }
 
 QTableView::item:focus
@@ -53,6 +89,11 @@ QTableView::item:focus
 QTableView::item:selected
 {
 selection-background-color: #3DD080;
+}
+
+QTableView::item:!selected:hover
+{
+border: 2px solid #8BFFB4 ;
 }
 
 QTableView::item:hover
@@ -68,6 +109,16 @@ selection-background-color: #3DD080;
 QListWidget::item:selected
 {
 selection-background-color: #3DD080;
+}
+
+QListWidget::item:hover
+{
+selection-background-color: #33FF90 ;
+}
+
+QListWidget::item:!selected:hover
+{
+border: 2px solid #8BFFB4 ;
 }
 
 QScrollBar:horizontal{
@@ -120,6 +171,47 @@ QScrollBar::sub-line:vertical {
       background: none;
 	  width: 0px;
 	  height: 0px;
+}
+
+QLineEdit {
+    border: 2px solid grey;
+    border-radius: 5px;
+}
+
+QLineEdit:hover {
+    border: 2px solid #48E48F ;
+    border-radius: 5px;
+}
+
+QPushButton {
+    border: 2px solid grey;
+	border-radius: 5px;
+}
+
+QPushButton:hover
+{
+     background-color: #48E48F ;
+	 
+}
+
+QComboBox {
+    border: 2px solid grey;
+    border-radius: 5px;
+}
+
+QComboBox:hover {
+    border: 2px solid #48E48F;
+    border-radius: 5px;
+}
+
+QComboBox::down-arrow
+{
+background-color : grey;
+}
+
+QPushButton:pressed{
+background-color: #8BFFB4;
+border-style: inset;
 }
 
 </string>
@@ -186,7 +278,7 @@ QScrollBar::sub-line:vertical {
             </property>
             <property name="font">
              <font>
-              <pointsize>13</pointsize>
+              <pointsize>12</pointsize>
              </font>
             </property>
             <property name="frameShape">
@@ -207,7 +299,7 @@ QScrollBar::sub-line:vertical {
             </property>
             <property name="minimumSize">
              <size>
-              <width>120</width>
+              <width>130</width>
               <height>30</height>
              </size>
             </property>
@@ -334,7 +426,7 @@ QScrollBar::sub-line:vertical {
             </property>
             <property name="font">
              <font>
-              <pointsize>13</pointsize>
+              <pointsize>12</pointsize>
              </font>
             </property>
             <property name="text">
@@ -464,7 +556,7 @@ QScrollBar::sub-line:vertical {
             </property>
             <property name="font">
              <font>
-              <pointsize>13</pointsize>
+              <pointsize>12</pointsize>
              </font>
             </property>
             <property name="text">
@@ -828,13 +920,13 @@ QScrollBar::sub-line:vertical {
             <property name="minimumSize">
              <size>
               <width>550</width>
-              <height>35</height>
+              <height>25</height>
              </size>
             </property>
             <property name="maximumSize">
              <size>
               <width>16777215</width>
-              <height>35</height>
+              <height>25</height>
              </size>
             </property>
             <property name="font">
@@ -852,6 +944,7 @@ QScrollBar::sub-line:vertical {
              <string notr="true">QProgressBar {
     border: 2px solid grey;
     border-radius: 5px;
+    text-align: center;
 }
 
 QProgressBar::chunk {
@@ -859,11 +952,7 @@ QProgressBar::chunk {
     width: 20px;
 }
 
-QProgressBar {
-    border: 2px solid grey;
-    border-radius: 5px;
-    text-align: center;
-}</string>
+</string>
             </property>
             <property name="value">
              <number>0</number>
