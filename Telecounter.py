@@ -16,29 +16,10 @@ import pickle
 from session_creator import *
 from id_manager import *
 
-#[x]only alert version if it's below
-#[x] add multi session counting
-    #[x] switch to QRunnable
 #[ ] add charting based on kpi and all other users
-#[x] when creating log change total message/kpi to 0
 #[ ] count message based on dates
-#[x] change app name to Telecounter(top text)
 #[ ] add extra features to delete joining messages
-#[x] Fix log for multi session
-#[x] block session if searching private group and not joined
-#[x] Not working properly with ending message double session  
-#[x] Add a predetermined total message to all session: unnecessary
-#[ ] add a requirements.txt
-#[x] after counting check somewhere else and make bar 100%
-#[x] keep buttons disables until all threads have stopped working
-#[x] show counting + finishing log message both at once
-#[x] remove extra spaces on phone number at session creator
-#[x] stop function when pressed exit
-#[x] re-edit copying function
-#[x] cancel copying if no row is selected
-#[x] find out what widget is selected and based on that make use of ctrl c
-#[x] log is not showing proper total message or KPI
-#[x] fix log placement
+#[ ] add more stylesheet
 
 version = 'v2.0'
 new_version = ''
@@ -210,17 +191,17 @@ class main_form(QMainWindow):
             self.w.show()
         self.timer.stop()
 
-    def empty_statusbar(self):
+    def empty_statusbar(self): #clear status bar message
         self.clear_statusbar.stop()
         self.ui.statusBar().clearMessage()
 
-    def sorting_event_1(self):
+    def sorting_event_1(self):  #triggered when clicking on table column buttons
         self.ui.table_widget_1.clearSelection()
     
     def sorting_event_2(self):
         self.ui.table_widget_2.clearSelection()
 
-    def cell_copier(self):
+    def cell_copier(self):  #copies cells selected in the table widget
         self.all_cell_selected = {}
         self.kpi_cell_selected = {}
         self.largest_text_all = {}
@@ -259,6 +240,7 @@ class main_form(QMainWindow):
                 if len(cell_text) > self.largest_text_kpi[col_num]:
                     self.largest_text_kpi[col_num] = len(cell_text)
         
+        #sort all data by keys so rows and columns aligns properly
         self.all_cell_selected = dict(sorted(self.all_cell_selected.items()))
         self.largest_text_all = dict(sorted(self.largest_text_all.items()))
         self.kpi_cell_selected = dict(sorted(self.kpi_cell_selected.items()))
@@ -288,7 +270,7 @@ class main_form(QMainWindow):
                 self.ui.statusBar().showMessage(f'Cells Copied')
                 self.clear_statusbar.start()
 
-    def keyPressEvent(self, event):
+    def keyPressEvent(self, event): #copy event when pressing CTRL C
         if QKeySequence(event.key()+int(event.modifiers())) == QKeySequence("Ctrl+C"):
             self.cell_copier()
 
@@ -345,7 +327,7 @@ class main_form(QMainWindow):
             else:
                 event.ignore()
 
-    def reload_router(self):
+    def reload_router(self): #for checking whether Reload button at ID manager was clicked 
         self.reload_pressed = True
         self.sess.reload_value()
         self.manager.reload_list()
@@ -354,7 +336,7 @@ class main_form(QMainWindow):
         quit = QAction("Quit", self)
         quit.triggered.connect(self.close)
 
-    def reload_kpi(self):
+    def reload_kpi(self):   #reloads pickle kpi data to the list
         global accounts
         data_store = open('resource/kpi_id.pckl', 'rb')
         accounts = pickle.load(data_store)
@@ -386,7 +368,7 @@ class main_form(QMainWindow):
             self.ui.combo_session_2.addItems(all_files)
             self.ui.combo_session_2.setCurrentIndex(0)
 
-    def edit_box_1(self):
+    def edit_box_1(self):   #Paste/Clear button on Message Box
         if self.starting_paste is True:
             self.ui.box_starting_mess.setText(str(pyperclip.paste()))
         else:
@@ -398,7 +380,11 @@ class main_form(QMainWindow):
         else:
             self.ui.box_ending_mess.clear()
 
-    def data_parser(self):
+    def data_parser(self): 
+        #verifies message box message links
+        # for private group/public group
+        # or for invalid link
+         
         if self.ui.check_create_log.isChecked():
             self.create_log = True
         else:
@@ -463,6 +449,9 @@ class main_form(QMainWindow):
                 f'Make sure the links are in correct format. Example: https://t.me/TestGroup/123456 or https://t.me/c/123456/123456')
 
     def disable_widgets(self):
+        # disables widgets. used for if during multi
+        # session run widgets are enabled prematurely 
+
         self.ui.table_widget_1.setRowCount(5)
         self.ui.table_widget_2.setRowCount(5)
         self.ui.Button_count.setEnabled(False)
@@ -478,6 +467,8 @@ class main_form(QMainWindow):
         self.force_stop = 2
 
     def enable_widgets(self):
+        #used to enable widgets once all done
+
         self.ui.Button_count.setEnabled(True)
         self.ui.button_create_sess.setEnabled(True)
         self.ui.button_send_code.setEnabled(True)
@@ -498,6 +489,8 @@ class main_form(QMainWindow):
         self.cu_dots = ''
 
     def counting_label(self):
+        #sets status bar label
+
         if self.ui.Button_count.isEnabled() == True:
             if self.running == True or self.finishing_log == True:
                 self.disable_widgets()
@@ -519,6 +512,8 @@ class main_form(QMainWindow):
             self.counting_time -= 1
         
     def data_distributor(self, list_data):
+        #distributes counting data to relevant widgets
+
         self.counting = True
         print(
             f'Bar Value: {list_data[0]}, Total Message: {list_data[1]}, Counter: {list_data[2]}')
@@ -527,6 +522,9 @@ class main_form(QMainWindow):
         self.counting_label()
 
     def data_distributor_multi(self, list_data):
+        #distributes counting data to relevant widgets
+        #for multi session
+
         self.counting = True
         print(
             f'Bar Value: {list_data[0]}, Total Message: {list_data[1]}, Counter: {list_data[2]}')
@@ -564,6 +562,8 @@ class main_form(QMainWindow):
         self.ui.label_3.adjustSize()
 
     def total_mess_saver(self, user_data):
+        #for counting total message including kpi
+
         user_id = int(user_data[0])
         mess_char = int(user_data[1])
         if user_id not in self.total_mess_char:
@@ -572,6 +572,9 @@ class main_form(QMainWindow):
             self.total_mess_char[user_id] = self.total_mess_char[user_id] + mess_char
 
     def row_data_setter(self):
+        #sets data to table widgets
+        #once everything is calculated
+
         if self.running == True:
             pass
         else:
@@ -619,6 +622,10 @@ class main_form(QMainWindow):
                 self.ui.table_widget_2.setItem(row_num, 4, average_count)
 
     def finishing(self, total_num):
+        #final function once the session ends
+        #either it will set proper numer/text to the widgets
+        #or show the error message
+
         self.enable_widgets()
         if total_num[0] == 'incomplete':
             self.ui.total_2.setText(f'Total Message: 0')
@@ -637,16 +644,19 @@ class main_form(QMainWindow):
             self.ui.statusBar().clearMessage()
             self.ui.total_2.setText(f'Total Message: {new_all_num}')
             self.ui.total_1.setText(f'Total KPI: {new_kpi_num}')
-        self.ui.table_widget_2.setRowCount(self.kpi_latest_row_num)
-        self.ui.table_widget_1.setRowCount(self.all_latest_row_num)
-        self.row_timer.start()
+            self.ui.table_widget_2.setRowCount(self.kpi_latest_row_num)
+            self.ui.table_widget_1.setRowCount(self.all_latest_row_num)
+            self.row_timer.start()
 
     def row_amount(self, data):
+        #settting initial row to widgets
         self.counting = False
         self.ui.table_widget_1.setRowCount(5)
         self.ui.table_widget_2.setRowCount(5)
 
     def set_row_data(self, data):
+        # gathers data for setting up on table widgets
+
         if self.ui.Button_count.isEnabled() == True:
             if self.running == True or self.finishing_log == True:
                 self.disable_widgets()
@@ -670,29 +680,30 @@ class main_form(QMainWindow):
         self.ui.table_widget_1.setRowCount(self.all_latest_row_num)
 
     def set_row_data_kpi(self, data):
-        try:
-            if int(data[4]) in self.kpi_log_row:
-                new_count = self.kpi_log_row[int(data[4])][2] + int(data[2])
-                old_row = self.kpi_log_row[int(data[4])][3]
-                self.kpi_log_row[data[4]] = [data[0], data[1], new_count, old_row]
-            else:
-                self.kpi_log_row[data[4]] = [data[0], data[1], int(data[2]), self.kpi_latest_row_num]
-                self.kpi_latest_row_num += 1 
 
-            try:
-                average_char = int(self.total_mess_char[int(data[4])] / int(self.kpi_log_row[int(data[4])][2]))
-                self.kpi_log_row[data[4]].append(average_char)
-            except:
-                average_char = 0
-                self.kpi_log_row[data[4]].append(average_char)
-            self.ui.table_widget_2.setRowCount(self.kpi_latest_row_num)
-        except Exception as e:
-            print(e)
+        # gathers data for setting up on table widgets
+
+        if int(data[4]) in self.kpi_log_row:
+            new_count = self.kpi_log_row[int(data[4])][2] + int(data[2])
+            old_row = self.kpi_log_row[int(data[4])][3]
+            self.kpi_log_row[data[4]] = [data[0], data[1], new_count, old_row]
+        else:
+            self.kpi_log_row[data[4]] = [data[0], data[1], int(data[2]), self.kpi_latest_row_num]
+            self.kpi_latest_row_num += 1 
+
+        try:
+            average_char = int(self.total_mess_char[int(data[4])] / int(self.kpi_log_row[int(data[4])][2]))
+            self.kpi_log_row[data[4]].append(average_char)
+        except:
+            average_char = 0
+            self.kpi_log_row[data[4]].append(average_char)
+        self.ui.table_widget_2.setRowCount(self.kpi_latest_row_num)
 
     def mess_value_setter(self, mess_val):
         self.mess_value = mess_val
 
     def incom_sess(self, sess):
+        #keeps track of incomplete sessions
         sess_name = sess.split(' is incomplete')[0]
         self.incomplete_sess.append(sess_name)
 
@@ -701,6 +712,9 @@ class main_form(QMainWindow):
         self.thread_timer.setInterval(1000)
 
     def client_starter(self):
+        #reset variables, table rows, labels
+        #detects multi session or single session
+        #and verifies whether a session is active
         self.reload_kpi()
         self.session_detector()
         self.disable_widgets()
@@ -725,7 +739,6 @@ class main_form(QMainWindow):
         self.kpi_log_row = {}
         self.finishing_data = {}
 
-        #[x] break block here based on whether multi client is selected
         if self.multi_sess_selected == True:
             pool = QThreadPool.globalInstance()
             available_sess = self.session_list
@@ -758,9 +771,12 @@ class main_form(QMainWindow):
             self.thread_timer.timeout.connect(self.single_client)
             self.thread_timer.setInterval(5000)
             self.thread_timer.start()
-        #[x] remove the timer somehow, add status bar text
 
     def single_client(self):
+        #for processing single session
+        #verifies whether the session is good to go or
+        #if private group is joined if selected
+
         if self.mess_id_latest != 0:
             self.thread_timer.stop()
         
@@ -803,6 +819,11 @@ class main_form(QMainWindow):
             break
     
     def multi_client(self):
+        #for processing multi session
+        #verifies whether the session is good to go or
+        #if private group is joined if selected
+        #divides the part of each session and starts the
+        #thread accordingly
         if self.mess_id_latest != 0:
             self.thread_timer.stop()
 
@@ -817,7 +838,7 @@ class main_form(QMainWindow):
             return
         pool = QThreadPool.globalInstance()
         threadCount = QThreadPool.globalInstance().maxThreadCount()
-        available_sess = self.session_list #[x] change to detected sessions
+        available_sess = self.session_list
 
         for i in self.incomplete_sess:
             if i in available_sess:
@@ -875,6 +896,8 @@ class main_form(QMainWindow):
                 break
 
 class worker_signals(QObject):
+    #signal slots for communicating
+
     finished = pyqtSignal(list)
     progress = pyqtSignal(list)
     list_size = pyqtSignal(int)
@@ -926,11 +949,14 @@ class Worker(QRunnable):
 
             else:
                 async with client:
-                    a = []
+                    #start iterating fromt the selected message links
                     async for message in client.iter_messages(self.group_name,
                                         offset_id=self.group_ending):
+
                         if stop_process == True:
+                            #for stopping the thread during processing
                             return
+
                         if int(message.id) < self.group_starting:
                             if self.pending > self.max_bar:
                                 pass
@@ -944,13 +970,9 @@ class Worker(QRunnable):
 
                         else:
                             try:
-                                a.append(message.id)
-                            except:
-                                pass
-
-                            try:
                                 try:
 
+                                    #for keeping track of message data by each user
                                     mess_sender = message.from_id.user_id
                                     if mess_sender in self.message_data:
                                         self.message_data[mess_sender] = self.message_data[mess_sender] + 1
@@ -958,11 +980,14 @@ class Worker(QRunnable):
                                         self.message_data[mess_sender] = 1
 
                                     if int(message.id) == self.group_starting: 
+                                        
                                         if self.pending > self.max_bar:
                                             pass
                                         else:
                                             self.pending += self.max_bar
+
                                         self.total_mess += self.last_id - self.group_starting
+
                                         try:
                                             if message.from_id.user_id in accounts:
                                                 self.counter += 1
@@ -975,6 +1000,7 @@ class Worker(QRunnable):
                                         self.total_mess += self.last_id - message.id
                                         self.last_id = message.id
                                         self.pending_message += 1
+
                                         try:
                                             if message.from_id.user_id in accounts:
                                                 self.counter += 1
@@ -991,6 +1017,8 @@ class Worker(QRunnable):
                                             [self.bar, self.total_mess,
                                             self.counter, self.thread_num])
                                         await asyncio.sleep(0.02)
+                                        #small sleep time for qt animation
+                                        #change to work a bit more smoothly
 
                                     elif self.pending_message > 5:
                                         self.signal.progress.emit(
@@ -1042,6 +1070,7 @@ class Worker(QRunnable):
                         self.signal.list_size.emit(len(self.message_data))
 
                         for sender in self.message_data:
+                            #goes through previously collected user data for log
                             if stop_process == True:
                                 return
                             try:
@@ -1108,6 +1137,7 @@ class session_verifier(QRunnable):
                     self.signal.incomplete_sess.emit(f'{self.cu_session} is incomplete')
 
                 else:
+                    #verifies session whether it can be used for counting
                     async with client:
                         if self.private_group == True:
                             group_list = []
@@ -1137,7 +1167,7 @@ class session_verifier(QRunnable):
                     print('Error on disconnect')
             except Exception:
                 pass
-        #[x]eliminate timer
+
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
         loop.run_until_complete(verifier())
