@@ -20,14 +20,17 @@
    <string>Telecounter</string>
   </property>
   <property name="styleSheet">
-   <string notr="true">QMainWindow{background-color:white}</string>
+   <string notr="true">QMainWindow{background-color:white}
+</string>
   </property>
   <property name="tabShape">
    <enum>QTabWidget::Rounded</enum>
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="styleSheet">
-    <string notr="true"/>
+    <string notr="true">QWidget{
+selection-background-color: #3DD080;}
+</string>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout_3">
     <item>
@@ -40,6 +43,31 @@
       </property>
       <property name="styleSheet">
        <string notr="true">QTabWidget::tab-bar {alignment: center;
+}
+
+QTableView::item:focus
+{
+   selection-background-color: #3DD080;
+}
+
+QTableView::item:selected
+{
+selection-background-color: #3DD080;
+}
+
+QTableView::item:hover
+{
+selection-background-color: #33FF90 ;
+}
+
+QListWidget::item:focus
+{
+selection-background-color: #3DD080;
+}
+
+QListWidget::item:selected
+{
+selection-background-color: #3DD080;
 }
 
 QScrollBar:horizontal{
@@ -820,6 +848,23 @@ QScrollBar::sub-line:vertical {
             <property name="toolTipDuration">
              <number>0</number>
             </property>
+            <property name="styleSheet">
+             <string notr="true">QProgressBar {
+    border: 2px solid grey;
+    border-radius: 5px;
+}
+
+QProgressBar::chunk {
+    background-color: #33FF90;
+    width: 20px;
+}
+
+QProgressBar {
+    border: 2px solid grey;
+    border-radius: 5px;
+    text-align: center;
+}</string>
+            </property>
             <property name="value">
              <number>0</number>
             </property>
@@ -974,6 +1019,9 @@ QScrollBar::sub-line:vertical {
               </property>
               <property name="toolTip">
                <string>All Message Log</string>
+              </property>
+              <property name="styleSheet">
+               <string notr="true"/>
               </property>
               <property name="editTriggers">
                <set>QAbstractItemView::NoEditTriggers</set>
