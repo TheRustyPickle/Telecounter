@@ -19,7 +19,7 @@ from id_manager import *
 #[ ] add charting based on kpi and all other users
 #[ ] count message based on dates
 #[ ] add extra features to delete joining messages
-#[ ] add more stylesheet
+
 
 version = 'v2.0'
 new_version = ''
@@ -27,16 +27,17 @@ stop_process = False
 
 def version_check():  # for checking new releases on github
     global new_version
-    response = requests.get(
-        "https://api.github.com/repos/Sakib0194/Telecounter/releases/latest")
-    new_version = response.json()["name"]
-
+    try:
+        response = requests.get(
+            "https://api.github.com/repos/Sakib0194/Telecounter/releases/latest")
+        new_version = response.json()["name"]
+    except:
+        new_version = 'v2.0'
 
 Thread(target=version_check).start()
 
 api_id = 1234567
 api_hash = 'test'
-client = ''
 
 if os.path.exists('resource/kpi_id.pckl'):
     pass
