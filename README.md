@@ -1,5 +1,5 @@
 # Telecounter
-A GUI created with PyQt5 for counting messages in Telegram Groups from users.
+A GUI created with PyQt5 for counting messages in Telegram Groups from users. Requires Python 3.6+
 This was created for personal use and to make my life easier
 
 <h4> How to run</h4>
@@ -17,3 +17,7 @@ The GUI uses Telethon library. It automatically creates a session file that save
 <h4>What is KPI ID?</h4>
 
 You can select any number of Telegram user individually to view their message numbers separately from all users. If you want to count total messages from 10 users out of 10k messages, this is the way to go
+
+<h4>What is Multi Session counting?</h4>
+
+The GUI can distribute counting tasks among multiple Telegrams sessions by dividing them equally in parts if available, which will result in faster action and log placement. Especially useful if going for a long counting session. It can increase speed from 2x to indefinite based on the amount of sessions available
