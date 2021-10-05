@@ -7,7 +7,7 @@ import time
 from threading import Thread
 from PyQt5 import uic
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtWidgets import QApplication, QMainWindow, QMessageBox, QAction, QDesktopWidget, QPushButton, QLabel, QVBoxLayout, QWidget, QHBoxLayout
+from PyQt5.QtWidgets import QApplication, QLineEdit, QMainWindow, QMessageBox, QAction, QDesktopWidget, QPushButton, QLabel, QVBoxLayout, QWidget, QHBoxLayout, QCalendarWidget, QWidgetAction
 from PyQt5.QtCore import QRunnable, QThread, pyqtSignal, QObject, Qt, QTimer, QThreadPool, pyqtSlot
 from PyQt5.QtGui import *
 from telethon import TelegramClient
@@ -19,6 +19,8 @@ from id_manager import *
 #[ ] add charting based on kpi and all other users
 #[ ] count message based on dates
 #[ ] add extra features to delete joining messages
+#[ ] create logging system
+#[ ] new version available UI file with never show again checkbox. If checked show a message for a few seconds on status bar on startup
 
 
 version = 'v2.0'
@@ -89,17 +91,25 @@ class main_form(QMainWindow):
         except Exception:
             pass
         self.ui = uic.loadUi('resource/Design.ui', self)
+
+        self.manager = id_manager(self.ui)
+        self.sess = session_builder(self.ui)
+
         self.group_name = ''
         self.group_name_2 = ''
-        self.group_starting = 0
-        self.group_ending = 0
         self.cu_session = ''
         self.worker = ''
-        self.force_stop = 2
-        self.counting_time = 1
+        self.cu_dots = ''
+
+        self.group_starting = 0
+        self.group_ending = 0
         self.all_latest_row_num = 0
         self.kpi_latest_row_num = 0
-        self.cu_dots = ''
+        self.force_stop = 2
+        self.counting_time = 1
+        self.mess_value = 0
+        self.mess_id_latest = 0
+        
         self.create_log = True
         self.multi_sess_selected = False
         self.reload_pressed = False
@@ -109,6 +119,7 @@ class main_form(QMainWindow):
         self.running = False
         self.finishing_log = False
         self.counting = False
+
         self.all_cell_selected = {}
         self.kpi_cell_selected = {}
         self.finishing_data = {}
@@ -117,31 +128,36 @@ class main_form(QMainWindow):
         self.largest_text_kpi = {}
         self.all_log_row = {}
         self.kpi_log_row = {}
-
-        self.mess_value = 0
-        self.mess_id_latest = 0
-        self.incomplete_sess = []
-        self.session_list = []
         self.cu_bar_value = {}
         self.cu_total_mess = {}
         self.cu_kpi_mess = {}
         
-        self.manager = id_manager(self.ui)
-        self.sess = session_builder(self.ui)
+        self.incomplete_sess = []
+        self.session_list = []
+
+        self.button_calender_1 = QPushButton(self.ui.box_starting_mess)
+        self.button_calender_2 = QPushButton(self.ui.box_ending_mess)
+        
         self.session_detector()
         self.exit_detector()
         self.connections()
+        self.new_buttons()
         self.modifier()
+
         self.timer = QTimer()
         self.thread_timer = QTimer()
         self.row_timer = QTimer()
         self.clear_statusbar = QTimer()
+
         self.row_timer.setInterval(500)
+        self.row_timer.timeout.connect(self.row_data_setter)
+
         self.timer.setInterval(10000)
+        self.timer.timeout.connect(self.check_update)
+
         self.clear_statusbar.setInterval(3000)
         self.clear_statusbar.timeout.connect(self.empty_statusbar)
-        self.timer.timeout.connect(self.check_update)
-        self.row_timer.timeout.connect(self.row_data_setter)
+        
         self.timer.start()
         self.show()
 
@@ -162,6 +178,9 @@ class main_form(QMainWindow):
         self.ui.button_exit.clicked.connect(self.exiting)
         self.ui.table_widget_1.horizontalHeader().sortIndicatorChanged.connect(self.sorting_event_1)
         self.ui.table_widget_2.horizontalHeader().sortIndicatorChanged.connect(self.sorting_event_2)
+        self.button_calender_1.clicked.connect(self.ui.calender_display_1)
+        self.button_calender_2.clicked.connect(self.ui.calender_display_2)
+        self.ui.calender.selectionChanged.connect(self.calender_event)
 
     def modifier(self):  # modify widgets, button before the window loads
         self.ui.button_save.setEnabled(False)
@@ -169,7 +188,7 @@ class main_form(QMainWindow):
         self.ui.button_add_user.setEnabled(False)
         self.ui.button_clear_2.setText('Paste')
         self.ui.button_clear_1.setText('Paste')
-        self.resize(400, 350)
+        self.ui.resize(628, 325)
         self.ui.box_tg_code.resize(75, 30)
         self.ui.button_send_code.resize(90, 30)
         self.ui.table_widget_1.setColumnWidth(0, 115)
@@ -178,10 +197,47 @@ class main_form(QMainWindow):
         self.ui.table_widget_2.setColumnWidth(1, 110)
         self.ui.table_widget_1.setColumnWidth(2, 80)
         self.ui.table_widget_2.setColumnWidth(2, 80)
+        self.ui.calender.hide()
         qr = self.frameGeometry()
         cp = QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
         self.move(qr.topLeft())
+
+    def new_buttons(self):
+        self.button_calender_1.setText('📅')
+        self.button_calender_1.setCursor(Qt.ArrowCursor)
+        actions = QWidgetAction(self.button_calender_1)
+        actions.setDefaultWidget(self.button_calender_1)
+        self.ui.box_starting_mess.addAction(actions, QLineEdit.TrailingPosition)
+
+        self.button_calender_2.setText('📅')
+        self.button_calender_2.setCursor(Qt.ArrowCursor)
+        actions = QWidgetAction(self.button_calender_2)
+        actions.setDefaultWidget(self.button_calender_2)
+        self.ui.box_ending_mess.addAction(actions, QLineEdit.TrailingPosition)
+
+    def calender_display_1(self):
+        if self.ui.calender.isVisible():
+            self.ui.calender.hide()
+            self.ui.setMinimumSize(0,0) 
+            self.ui.resize(628, 325)  
+
+        else:
+            self.ui.resize(628, 575) 
+            self.ui.calender.show()  
+
+    def calender_display_2(self):
+        if self.ui.calender.isVisible():
+            self.ui.calender.hide()
+            self.ui.setMinimumSize(0,0) 
+            self.ui.resize(628, 325) 
+            
+        else:
+            self.ui.resize(628, 575) 
+            self.ui.calender.show()
+
+    def calender_event(self):
+        print(self.ui.calender.selectedDate().toString("dd-MM-yyyy"))
 
     def check_update(self):  # for opening the new version available form
         print('Current Version', version)
@@ -275,7 +331,14 @@ class main_form(QMainWindow):
         if QKeySequence(event.key()+int(event.modifiers())) == QKeySequence("Ctrl+C"):
             self.cell_copier()
 
-    def tab_changed(self):  # resize form if message log tab selected
+    def tab_changed(self): 
+        # resize form if message log tab selected
+        #if the calender widget is on, remove that
+
+        self.ui.calender.hide()
+        self.ui.setMinimumSize(0,0) 
+        self.ui.resize(628, 325)  
+
         if self.ui.tabWidget.currentIndex() == 1:
             self.resize(850, 400)
         else:

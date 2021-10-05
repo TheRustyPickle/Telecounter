@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>650</width>
-    <height>438</height>
+    <height>618</height>
    </rect>
   </property>
   <property name="maximumSize">
@@ -28,14 +28,18 @@
   </property>
   <widget class="QWidget" name="centralwidget">
    <property name="styleSheet">
-    <string notr="true">QWidget{
+    <string notr="true">QWidget {
 selection-background-color: #3DD080;}
 
 QLineEdit:focus{
 background-color: #3DD080;}
 
 QComboBox:focus{
-background-color: #3DD080;}</string>
+background-color: #3DD080;}
+
+QCalendarWidget{
+selection-background-color: red;}
+</string>
    </property>
    <layout class="QVBoxLayout" name="verticalLayout_3">
     <item>
@@ -209,12 +213,19 @@ QComboBox::down-arrow
 background-color : grey;
 }
 
+QComboBox::down-arrow:hover
+{
+background-color : green;
+}
+
 QPushButton:pressed{
 background-color: #8BFFB4;
 border-style: inset;
 }
 
-</string>
+QCheckBox:hover{
+color: #48E48F
+}</string>
       </property>
       <property name="tabPosition">
        <enum>QTabWidget::North</enum>
@@ -245,9 +256,6 @@ border-style: inset;
         <string>Counter</string>
        </attribute>
        <layout class="QVBoxLayout" name="verticalLayout_2">
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_10"/>
-        </item>
         <item>
          <layout class="QHBoxLayout" name="horizontalLayout">
           <property name="spacing">
@@ -299,7 +307,7 @@ border-style: inset;
             </property>
             <property name="minimumSize">
              <size>
-              <width>130</width>
+              <width>150</width>
               <height>30</height>
              </size>
             </property>
@@ -344,6 +352,9 @@ border-style: inset;
             <property name="orientation">
              <enum>Qt::Horizontal</enum>
             </property>
+            <property name="sizeType">
+             <enum>QSizePolicy::Fixed</enum>
+            </property>
             <property name="sizeHint" stdset="0">
              <size>
               <width>40</width>
@@ -375,7 +386,7 @@ border-style: inset;
             </property>
             <property name="sizeHint" stdset="0">
              <size>
-              <width>80</width>
+              <width>40</width>
               <height>20</height>
              </size>
             </property>
@@ -960,6 +971,12 @@ QProgressBar::chunk {
            </widget>
           </item>
          </layout>
+        </item>
+        <item>
+         <widget class="QCalendarWidget" name="calender"/>
+        </item>
+        <item>
+         <layout class="QHBoxLayout" name="horizontalLayout_10"/>
         </item>
        </layout>
       </widget>
@@ -2336,7 +2353,7 @@ Unlock buttons
      <x>0</x>
      <y>0</y>
      <width>650</width>
-     <height>23</height>
+     <height>24</height>
     </rect>
    </property>
   </widget>
