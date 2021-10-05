@@ -100,6 +100,7 @@ class main_form(QMainWindow):
         self.cu_session = ''
         self.worker = ''
         self.cu_dots = ''
+        self.box_selected = ''
 
         self.group_starting = 0
         self.group_ending = 0
@@ -181,6 +182,8 @@ class main_form(QMainWindow):
         self.button_calender_1.clicked.connect(self.ui.calender_display_1)
         self.button_calender_2.clicked.connect(self.ui.calender_display_2)
         self.ui.calender.selectionChanged.connect(self.calender_event)
+        QApplication.instance().focusChanged.connect(self.focus_change)
+        
 
     def modifier(self):  # modify widgets, button before the window loads
         self.ui.button_save.setEnabled(False)
@@ -220,24 +223,44 @@ class main_form(QMainWindow):
         if self.ui.calender.isVisible():
             self.ui.calender.hide()
             self.ui.setMinimumSize(0,0) 
-            self.ui.resize(628, 325)  
+            self.ui.resize(628, 325) 
+            self.box_selected = '' 
 
         else:
-            self.ui.resize(628, 575) 
-            self.ui.calender.show()  
+            self.ui.resize(628, 588) 
+            self.ui.calender.show() 
+            self.box_selected = 'box_starting_mess'
+
+    def focus_change(self, old, new):
+        try:
+            new_widg = new.objectName()
+            if new_widg == 'box_ending_mess' or new_widg == 'box_starting_mess':
+                self.box_selected = new_widg
+        except:
+            pass
 
     def calender_display_2(self):
         if self.ui.calender.isVisible():
             self.ui.calender.hide()
             self.ui.setMinimumSize(0,0) 
             self.ui.resize(628, 325) 
+            self.box_selected = '' 
             
         else:
-            self.ui.resize(628, 575) 
+            self.ui.resize(628, 588) 
             self.ui.calender.show()
+            self.box_selected = 'box_ending_mess'
 
     def calender_event(self):
-        print(self.ui.calender.selectedDate().toString("dd-MM-yyyy"))
+        selected_date = self.ui.calender.selectedDate().toString("dd-MM-yyyy")
+        if self.box_selected != '':
+            if self.box_selected == 'box_starting_mess':
+                self.ui.box_starting_mess.clear()
+                self.ui.box_starting_mess.setText(selected_date)
+            
+            elif self.box_selected == 'box_ending_mess':
+                self.ui.box_ending_mess.clear()
+                self.ui.box_ending_mess.setText(selected_date)
 
     def check_update(self):  # for opening the new version available form
         print('Current Version', version)
@@ -334,7 +357,7 @@ class main_form(QMainWindow):
     def tab_changed(self): 
         # resize form if message log tab selected
         #if the calender widget is on, remove that
-
+        self.box_selected = '' 
         self.ui.calender.hide()
         self.ui.setMinimumSize(0,0) 
         self.ui.resize(628, 325)  
