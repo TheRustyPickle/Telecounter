@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>650</width>
-    <height>618</height>
+    <height>610</height>
    </rect>
   </property>
   <property name="maximumSize">
@@ -41,7 +41,7 @@ QCalendarWidget{
 selection-background-color: red;}
 </string>
    </property>
-   <layout class="QVBoxLayout" name="verticalLayout_3">
+   <layout class="QHBoxLayout" name="horizontalLayout_2">
     <item>
      <widget class="QTabWidget" name="tabWidget">
       <property name="maximumSize">
@@ -408,7 +408,7 @@ color: #48E48F
          </spacer>
         </item>
         <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <layout class="QHBoxLayout" name="horizontalLayout_20">
           <property name="spacing">
            <number>2</number>
           </property>
@@ -461,7 +461,7 @@ color: #48E48F
             </property>
             <property name="maximumSize">
              <size>
-              <width>16777215</width>
+              <width>350</width>
               <height>35</height>
              </size>
             </property>
@@ -482,6 +482,28 @@ color: #48E48F
            </widget>
           </item>
           <item>
+           <widget class="QLineEdit" name="box_ending_date">
+            <property name="sizePolicy">
+             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+              <horstretch>1</horstretch>
+              <verstretch>0</verstretch>
+             </sizepolicy>
+            </property>
+            <property name="minimumSize">
+             <size>
+              <width>0</width>
+              <height>35</height>
+             </size>
+            </property>
+            <property name="maximumSize">
+             <size>
+              <width>0</width>
+              <height>16777215</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item>
            <widget class="QPushButton" name="button_clear_1">
             <property name="sizePolicy">
              <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -497,7 +519,7 @@ color: #48E48F
             </property>
             <property name="maximumSize">
              <size>
-              <width>16777215</width>
+              <width>60</width>
               <height>35</height>
              </size>
             </property>
@@ -516,8 +538,8 @@ color: #48E48F
             </property>
             <property name="sizeHint" stdset="0">
              <size>
-              <width>40</width>
-              <height>20</height>
+              <width>13</width>
+              <height>32</height>
              </size>
             </property>
            </spacer>
@@ -591,7 +613,7 @@ color: #48E48F
             </property>
             <property name="maximumSize">
              <size>
-              <width>16777215</width>
+              <width>350</width>
               <height>35</height>
              </size>
             </property>
@@ -627,7 +649,7 @@ color: #48E48F
             </property>
             <property name="maximumSize">
              <size>
-              <width>16777215</width>
+              <width>60</width>
               <height>35</height>
              </size>
             </property>
@@ -973,10 +995,11 @@ QProgressBar::chunk {
          </layout>
         </item>
         <item>
-         <widget class="QCalendarWidget" name="calender"/>
-        </item>
-        <item>
-         <layout class="QHBoxLayout" name="horizontalLayout_10"/>
+         <widget class="QCalendarWidget" name="calender">
+          <property name="styleSheet">
+           <string notr="true"/>
+          </property>
+         </widget>
         </item>
        </layout>
       </widget>

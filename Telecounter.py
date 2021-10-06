@@ -4,11 +4,15 @@ import pyperclip
 import requests
 import webbrowser
 import time
+import datetime
 from threading import Thread
 from PyQt5 import uic
 from PyQt5 import QtWidgets, QtCore
-from PyQt5.QtWidgets import QApplication, QLineEdit, QMainWindow, QMessageBox, QAction, QDesktopWidget, QPushButton, QLabel, QVBoxLayout, QWidget, QHBoxLayout, QCalendarWidget, QWidgetAction
-from PyQt5.QtCore import QRunnable, QThread, pyqtSignal, QObject, Qt, QTimer, QThreadPool, pyqtSlot
+from PyQt5.QtWidgets import QApplication, QLineEdit, \
+    QMainWindow, QMessageBox, QAction, QDesktopWidget, \
+    QPushButton, QLabel, QVBoxLayout, QWidget, QHBoxLayout, QWidgetAction
+from PyQt5.QtCore import QRunnable, QThread, pyqtSignal, \
+    QObject, Qt, QTimer, QThreadPool, pyqtSlot
 from PyQt5.QtGui import *
 from telethon import TelegramClient
 import asyncio
@@ -20,7 +24,6 @@ from id_manager import *
 #[ ] count message based on dates
 #[ ] add extra features to delete joining messages
 #[ ] create logging system
-#[ ] new version available UI file with never show again checkbox. If checked show a message for a few seconds on status bar on startup
 
 
 version = 'v2.0'
@@ -138,6 +141,7 @@ class main_form(QMainWindow):
 
         self.button_calender_1 = QPushButton(self.ui.box_starting_mess)
         self.button_calender_2 = QPushButton(self.ui.box_ending_mess)
+        self.button_calender_3 = QPushButton(self.ui.box_ending_date)
         
         self.session_detector()
         self.exit_detector()
@@ -181,6 +185,7 @@ class main_form(QMainWindow):
         self.ui.table_widget_2.horizontalHeader().sortIndicatorChanged.connect(self.sorting_event_2)
         self.button_calender_1.clicked.connect(self.ui.calender_display_1)
         self.button_calender_2.clicked.connect(self.ui.calender_display_2)
+        self.button_calender_3.clicked.connect(self.ui.calender_display_3)
         self.ui.calender.selectionChanged.connect(self.calender_event)
         QApplication.instance().focusChanged.connect(self.focus_change)
         
@@ -201,6 +206,8 @@ class main_form(QMainWindow):
         self.ui.table_widget_1.setColumnWidth(2, 80)
         self.ui.table_widget_2.setColumnWidth(2, 80)
         self.ui.calender.hide()
+        self.ui.calender.setVerticalHeaderFormat(0)
+        self.ui.box_ending_date.hide()
         qr = self.frameGeometry()
         cp = QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
@@ -219,6 +226,26 @@ class main_form(QMainWindow):
         actions.setDefaultWidget(self.button_calender_2)
         self.ui.box_ending_mess.addAction(actions, QLineEdit.TrailingPosition)
 
+        self.button_calender_3.setText('📅')
+        self.button_calender_3.setCursor(Qt.ArrowCursor)
+        actions = QWidgetAction(self.button_calender_3)
+        actions.setDefaultWidget(self.button_calender_3)
+        self.ui.box_ending_date.addAction(actions, QLineEdit.TrailingPosition)
+
+    def show_date_box(self):
+        self.ui.box_ending_date.setMinimumSize(205, 35)
+        self.ui.box_ending_date.setMaximumSize(205, 35)
+        self.ui.box_starting_mess.setMinimumSize(205, 35)
+        self.ui.box_starting_mess.setMaximumSize(205, 35)
+        self.ui.box_starting_mess.setPlaceholderText('Starting Date')
+        self.ui.box_ending_date.setPlaceholderText('Ending Date')
+        self.ui.box_ending_mess.setPlaceholderText('Group Username/Link')
+        self.ui.box_ending_date.resize(200, 35)
+        self.ui.button_clear_1.hide()
+        self.ui.box_ending_date.show()
+        self.ui.label.setText('Start And End Date')
+        self.ui.label_10.setText('Group Username/Link')
+
     def calender_display_1(self):
         if self.ui.calender.isVisible():
             self.ui.calender.hide()
@@ -230,14 +257,7 @@ class main_form(QMainWindow):
             self.ui.resize(628, 588) 
             self.ui.calender.show() 
             self.box_selected = 'box_starting_mess'
-
-    def focus_change(self, old, new):
-        try:
-            new_widg = new.objectName()
-            if new_widg == 'box_ending_mess' or new_widg == 'box_starting_mess':
-                self.box_selected = new_widg
-        except:
-            pass
+            self.show_date_box()
 
     def calender_display_2(self):
         if self.ui.calender.isVisible():
@@ -250,6 +270,28 @@ class main_form(QMainWindow):
             self.ui.resize(628, 588) 
             self.ui.calender.show()
             self.box_selected = 'box_ending_mess'
+            self.show_date_box()
+
+    def calender_display_3(self):
+        if self.ui.calender.isVisible():
+            self.ui.calender.hide()
+            self.ui.setMinimumSize(0,0) 
+            self.ui.resize(628, 325) 
+            self.box_selected = '' 
+            
+        else:
+            self.ui.resize(628, 588) 
+            self.ui.calender.show()
+            self.box_selected = 'box_ending_date'
+            self.show_date_box()
+
+    def focus_change(self, old, new):
+        try:
+            new_widg = new.objectName()
+            if new_widg == 'box_ending_mess' or new_widg == 'box_starting_mess':
+                self.box_selected = new_widg
+        except:
+            pass
 
     def calender_event(self):
         selected_date = self.ui.calender.selectedDate().toString("dd-MM-yyyy")
@@ -470,70 +512,77 @@ class main_form(QMainWindow):
     def data_parser(self): 
         #verifies message box message links
         # for private group/public group
+        # whether date was entered
         # or for invalid link
-         
-        if self.ui.check_create_log.isChecked():
-            self.create_log = True
-        else:
-            self.create_log = False
-        
-        if self.ui.checkbox_multi_sess.isChecked():
-            self.multi_sess_selected = True
-        else:
-            self.multi_sess_selected = False
 
-        starting_data = self.ui.box_starting_mess.text()
-        starting_data = "".join(starting_data.split())
-        if '/c/' in starting_data:
-            self.ui.statusBar().showMessage(f'Private Group Detected')
-            self.pri_group = True
-
-        ending_data = self.ui.box_ending_mess.text()
-        ending_data = "".join(ending_data.split())
-        self.cu_session = self.ui.combobox_session.currentText()
-        try:
-            if starting_data == '':
-                pass
-            elif 'https://t.me/' not in starting_data:
-                self.ui.statusBar().showMessage(
-                    f'https://t.me/group_name/message_id is the correct format')
+        if '-' in self.ui.box_starting_mess.text():
+            self.datetime_parser()
+        else:
+            if self.ui.check_create_log.isChecked():
+                self.create_log = True
             else:
-                if '/c/' in starting_data:
-                    starting_data = starting_data.replace('https://t.me/c/', '')
-                    starting_data = "".join(starting_data.split())
-                    starting_message = starting_data.split('/')
-                    self.group_name = starting_message[0]
-                    self.group_name = int(f'-100{self.group_name}')
-                else:
-                    starting_data = starting_data.replace('https://t.me/', '')
-                    starting_data = "".join(starting_data.split())
-                    starting_message = starting_data.split('/')
-                    self.group_name = starting_message[0]
-                self.group_starting = int(starting_message[1])
+                self.create_log = False
+            
+            if self.ui.checkbox_multi_sess.isChecked():
+                self.multi_sess_selected = True
+            else:
+                self.multi_sess_selected = False
 
-                if ending_data != '' and 'https://t.me/' in ending_data:
-                    if '/c/' in ending_data:
-                        ending_data = ending_data.replace(
-                            'https://t.me/c/', '')
-                        ending_data = "".join(ending_data.split())
-                        ending_message = ending_data.split('/')
-                        self.group_name_2 = ending_message[0]
-                        self.group_name_2 = int(f'-100{self.group_name_2}')
+            starting_data = self.ui.box_starting_mess.text()
+            starting_data = "".join(starting_data.split())
+            if '/c/' in starting_data:
+                self.ui.statusBar().showMessage(f'Private Group Detected')
+                self.pri_group = True
+
+            ending_data = self.ui.box_ending_mess.text()
+            ending_data = "".join(ending_data.split())
+            self.cu_session = self.ui.combobox_session.currentText()
+            try:
+                if starting_data == '':
+                    pass
+                elif 'https://t.me/' not in starting_data:
+                    self.ui.statusBar().showMessage(
+                        f'https://t.me/group_name/message_id is the correct format')
+                else:
+                    if '/c/' in starting_data:
+                        starting_data = starting_data.replace('https://t.me/c/', '')
+                        starting_data = "".join(starting_data.split())
+                        starting_message = starting_data.split('/')
+                        self.group_name = starting_message[0]
+                        self.group_name = int(f'-100{self.group_name}')
                     else:
-                        ending_data = ending_data.replace('https://t.me/', '')
-                        ending_data = "".join(ending_data.split())
-                        ending_message = ending_data.split('/')
-                        self.group_name_2 = ending_message[0]
-                    self.group_ending = int(ending_message[1])+1
+                        starting_data = starting_data.replace('https://t.me/', '')
+                        starting_data = "".join(starting_data.split())
+                        starting_message = starting_data.split('/')
+                        self.group_name = starting_message[0]
+                    self.group_starting = int(starting_message[1])
 
-                if ending_data != '' and self.group_name_2 != self.group_name:
-                    self.ui.statusBar().showMessage(f'Starting and Ending Group is not the same!')
-                else:
-                    self.client_starter()
-        except Exception as e:
-            print(e)
-            self.ui.statusBar().showMessage(
-                f'Make sure the links are in correct format. Example: https://t.me/TestGroup/123456 or https://t.me/c/123456/123456')
+                    if ending_data != '' and 'https://t.me/' in ending_data:
+                        if '/c/' in ending_data:
+                            ending_data = ending_data.replace(
+                                'https://t.me/c/', '')
+                            ending_data = "".join(ending_data.split())
+                            ending_message = ending_data.split('/')
+                            self.group_name_2 = ending_message[0]
+                            self.group_name_2 = int(f'-100{self.group_name_2}')
+                        else:
+                            ending_data = ending_data.replace('https://t.me/', '')
+                            ending_data = "".join(ending_data.split())
+                            ending_message = ending_data.split('/')
+                            self.group_name_2 = ending_message[0]
+                        self.group_ending = int(ending_message[1])+1
+
+                    if ending_data != '' and self.group_name_2 != self.group_name:
+                        self.ui.statusBar().showMessage(f'Starting and Ending Group is not the same!')
+                    else:
+                        self.client_starter()
+            except Exception as e:
+                print(e)
+                self.ui.statusBar().showMessage(
+                    f'Make sure the links are in correct format. Example: https://t.me/TestGroup/123456 or https://t.me/c/123456/123456')
+
+    def datetime_parser(self):
+        pass
 
     def disable_widgets(self):
         # disables widgets. used for if during multi
