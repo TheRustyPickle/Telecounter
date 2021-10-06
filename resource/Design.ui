@@ -477,7 +477,7 @@ color: #48E48F
              <number>0</number>
             </property>
             <property name="placeholderText">
-             <string>Necessary</string>
+             <string>Necessary: Message Link To Start From</string>
             </property>
            </widget>
           </item>
@@ -498,8 +498,11 @@ color: #48E48F
             <property name="maximumSize">
              <size>
               <width>0</width>
-              <height>16777215</height>
+              <height>35</height>
              </size>
+            </property>
+            <property name="placeholderText">
+             <string>Ending Date'</string>
             </property>
            </widget>
           </item>
@@ -629,7 +632,7 @@ color: #48E48F
              <number>0</number>
             </property>
             <property name="placeholderText">
-             <string>Optional</string>
+             <string>Optional: Message Link to End At</string>
             </property>
            </widget>
           </item>

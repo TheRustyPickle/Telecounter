@@ -233,18 +233,54 @@ class main_form(QMainWindow):
         self.ui.box_ending_date.addAction(actions, QLineEdit.TrailingPosition)
 
     def show_date_box(self):
-        self.ui.box_ending_date.setMinimumSize(205, 35)
-        self.ui.box_ending_date.setMaximumSize(205, 35)
-        self.ui.box_starting_mess.setMinimumSize(205, 35)
-        self.ui.box_starting_mess.setMaximumSize(205, 35)
+        self.ui.calender.show()
+        self.ui.resize(628, 325) 
+        self.ui.box_ending_date.setMinimumSize(174, 35)
+        self.ui.box_starting_mess.setMinimumSize(174, 35)
+        self.ui.box_ending_date.resize(174, 35)
+        self.ui.box_starting_mess.resize(174, 35)
+        self.button_clear_1.setText('Clear')
         self.ui.box_starting_mess.setPlaceholderText('Starting Date')
         self.ui.box_ending_date.setPlaceholderText('Ending Date')
         self.ui.box_ending_mess.setPlaceholderText('Group Username/Link')
-        self.ui.box_ending_date.resize(200, 35)
-        self.ui.button_clear_1.hide()
         self.ui.box_ending_date.show()
         self.ui.label.setText('Start And End Date')
         self.ui.label_10.setText('Group Username/Link')
+
+    def remove_date_box(self):
+        self.ui.calender.hide()
+        self.ui.resize(628, 325) 
+        self.ui.box_ending_date.hide()
+        self.ui.box_ending_date.clear()
+        self.ui.box_starting_mess.setMinimumSize(350, 35)
+        self.ui.button_clear_1.show()
+        self.ui.label.setText('Starting Message Link')
+        self.ui.label_10.setText('Ending Message Link')
+        self.ui.box_starting_mess.setPlaceholderText('Necessary: Message Link To Start From')
+        self.ui.box_ending_mess.setPlaceholderText('Optional: Message Link to End At')
+        if self.ui.box_starting_mess.text() == '':
+            self.button_clear_1.setText('Clear')
+            self.starting_paste = False
+        else:
+            self.button_clear_1.setText('Paste')
+            self.starting_paste = True
+
+    def box_decider(self):
+        starting_mess_text = self.ui.box_starting_mess.text()
+        ending_date_text = self.ui.box_ending_date.text()
+        date_entered = False
+
+        if '-' in ending_date_text or '-' in starting_mess_text:
+            date_entered = True
+
+        if date_entered == True:
+            pass
+        else:
+            if self.ui.box_ending_date.isVisible():
+                self.remove_date_box()
+            else:
+                self.show_date_box()
+        
 
     def calender_display_1(self):
         if self.ui.calender.isVisible():
@@ -252,12 +288,13 @@ class main_form(QMainWindow):
             self.ui.setMinimumSize(0,0) 
             self.ui.resize(628, 325) 
             self.box_selected = '' 
+            self.box_decider()
 
         else:
             self.ui.resize(628, 588) 
             self.ui.calender.show() 
             self.box_selected = 'box_starting_mess'
-            self.show_date_box()
+            self.box_decider()
 
     def calender_display_2(self):
         if self.ui.calender.isVisible():
@@ -265,12 +302,13 @@ class main_form(QMainWindow):
             self.ui.setMinimumSize(0,0) 
             self.ui.resize(628, 325) 
             self.box_selected = '' 
+            self.box_decider()
             
         else:
             self.ui.resize(628, 588) 
             self.ui.calender.show()
             self.box_selected = 'box_ending_mess'
-            self.show_date_box()
+            self.box_decider()
 
     def calender_display_3(self):
         if self.ui.calender.isVisible():
@@ -278,17 +316,18 @@ class main_form(QMainWindow):
             self.ui.setMinimumSize(0,0) 
             self.ui.resize(628, 325) 
             self.box_selected = '' 
+            self.box_decider()
             
         else:
             self.ui.resize(628, 588) 
             self.ui.calender.show()
             self.box_selected = 'box_ending_date'
-            self.show_date_box()
+            self.box_decider()
 
     def focus_change(self, old, new):
         try:
             new_widg = new.objectName()
-            if new_widg == 'box_ending_mess' or new_widg == 'box_starting_mess':
+            if new_widg == 'box_ending_mess' or new_widg == 'box_starting_mess' or new_widg == 'box_ending_date':
                 self.box_selected = new_widg
         except:
             pass
@@ -303,6 +342,10 @@ class main_form(QMainWindow):
             elif self.box_selected == 'box_ending_mess':
                 self.ui.box_ending_mess.clear()
                 self.ui.box_ending_mess.setText(selected_date)
+
+            elif self.box_selected == 'box_ending_date':
+                self.ui.box_ending_date.clear()
+                self.ui.box_ending_date.setText(selected_date)
 
     def check_update(self):  # for opening the new version available form
         print('Current Version', version)
@@ -414,12 +457,16 @@ class main_form(QMainWindow):
         # if text box has text, clearself.all_log_row box on click
 
         text = self.ui.box_starting_mess.text()
-        if text == '':
-            self.ui.button_clear_1.setText('Paste')
+        if self.ui.box_ending_date.isVisible():
+            self.ui.button_clear_1.setText('Clear')
             self.starting_paste = True
         else:
-            self.ui.button_clear_1.setText('Clear')
-            self.starting_paste = False
+            if text == '':
+                self.ui.button_clear_1.setText('Paste')
+                self.starting_paste = True
+            else:
+                self.ui.button_clear_1.setText('Clear')
+                self.starting_paste = False
 
     def text_changed_ending(self):
         text = self.ui.box_ending_mess.text()
@@ -498,10 +545,15 @@ class main_form(QMainWindow):
             self.ui.combo_session_2.setCurrentIndex(0)
 
     def edit_box_1(self):   #Paste/Clear button on Message Box
-        if self.starting_paste is True:
-            self.ui.box_starting_mess.setText(str(pyperclip.paste()))
-        else:
+        if self.ui.box_ending_date.isVisible():
             self.ui.box_starting_mess.clear()
+            self.ui.box_ending_date.clear()
+        
+        else:
+            if self.starting_paste is True:
+                self.ui.box_starting_mess.setText(str(pyperclip.paste()))
+            else:
+                self.ui.box_starting_mess.clear()
 
     def edit_box_2(self):
         if self.ending_paste is True:
