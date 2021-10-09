@@ -1,18 +1,17 @@
 # Telecounter
-A GUI created with PyQt5 for counting messages in Telegram Groups from users. Requires Python 3.6+
-This was created for personal use and to make my life easier
+A GUI created with PyQt5 for counting messages in Telegram Groups from users with a Message Link or Date. Requires Python 3.6+
 
 <h4> How to run</h4>
 
-Download the executable from latest release for one click runnable or download source from Release and run Telecounter.py with required library
+Download the executable from latest Release for one click runnable file or download source from Release and run Telecounter.py with the required library
 
-GUI Design tested only on Windows and Arch Linux.
+GUI Design tested only on Windows 10 and Arch Linux.
 
-The GUI logo was taken randomly from google. You are free to change the logo to your desiring but the filename must remain logo.png
+The GUI logo was taken randomly from Google
 
 <h4>What is a session in the GUI?</h4>
 
-The GUI uses Telethon library. It automatically creates a session file that saves the necessary data to automatically log in again each time you run it. All data are saved locally. All action are done by Telegram API. It is asked to never share the session file/s with anyone. To create a session API ID and API Hash will be required. It is possible to find them on official [Telegram website](https://my.telegram.org/)
+The GUI uses Telethon library. It automatically creates a session file that saves the necessary data to automatically log in again each time you run it. All data are saved locally. All action are done by Telegram API. It is asked to never share the session file/s with anyone. To create a session, an API ID and API Hash will be required. It is possible to find them on official [Telegram website](https://my.telegram.org/)
 
 <h4>What is KPI ID?</h4>
 

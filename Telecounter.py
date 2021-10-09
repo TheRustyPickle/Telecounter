@@ -271,6 +271,8 @@ class main_form(QMainWindow):
         else:
             self.button_clear_1.setText('Clear')
             self.starting_paste = False
+        self.ui.box_starting_mess.setToolTip('Start count from this essage ink')
+        self.ui.box_ending_mess.setToolTip('End count from this essage ink')
 
     def box_decider(self):
         starting_mess_text = self.ui.box_starting_mess.text()
@@ -756,7 +758,7 @@ class main_form(QMainWindow):
         print(
             f'Bar Value: {list_data[0]}, Total Message: {list_data[1]}, Counter: {list_data[2]}')
         self.progress_bar(int(list_data[0]))
-        if int(list_data[1]) == -1:
+        if int(list_data[1]) >= -1:
             self.label_changer(0, 0)
         else:
             self.label_changer(int(list_data[1]), int(list_data[2]))
@@ -785,13 +787,15 @@ class main_form(QMainWindow):
             bar_value = 100
 
         for i in self.cu_total_mess:
+            if i >= -1:
+                i = 0
             tot_mess += self.cu_total_mess[i]
 
         for i in self.cu_kpi_mess:
             tot_kpi += self.cu_kpi_mess[i]
         self.progress_bar(bar_value)
 
-        if tot_mess == -1:
+        if tot_mess >= -1:
             self.label_changer(0, 0)
         else:
             self.label_changer(tot_mess, tot_kpi)
