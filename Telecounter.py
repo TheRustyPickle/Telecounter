@@ -12,7 +12,7 @@ from PyQt5.QtWidgets import QApplication, QLineEdit, \
     QMainWindow, QMessageBox, QAction, QDesktopWidget, \
     QPushButton, QLabel, QVBoxLayout, QWidget, QHBoxLayout, QWidgetAction
 from PyQt5.QtCore import QRunnable, QThread, pyqtSignal, \
-    QObject, Qt, QTimer, QThreadPool, pyqtSlot
+    QObject, Qt, QTimer, QThreadPool, pyqtSlot, QDate
 from PyQt5.QtGui import *
 from telethon import TelegramClient
 import asyncio
@@ -21,7 +21,7 @@ from session_creator import *
 from id_manager import *
 
 #[ ] add charting based on kpi and all other users
-#[ ] count message based on dates
+#[x] count message based on dates
 #[ ] add extra features to delete joining messages
 #[ ] create logging system
 
@@ -104,6 +104,8 @@ class main_form(QMainWindow):
         self.worker = ''
         self.cu_dots = ''
         self.box_selected = ''
+        self.starting_date = ''
+        self.ending_date = ''
 
         self.group_starting = 0
         self.group_ending = 0
@@ -140,8 +142,9 @@ class main_form(QMainWindow):
         self.session_list = []
 
         self.button_calender_1 = QPushButton(self.ui.box_starting_mess)
-        self.button_calender_2 = QPushButton(self.ui.box_ending_mess)
         self.button_calender_3 = QPushButton(self.ui.box_ending_date)
+
+        self.today = datetime.datetime.today().strftime('%Y %m %d').split(' ')
         
         self.session_detector()
         self.exit_detector()
@@ -184,10 +187,15 @@ class main_form(QMainWindow):
         self.ui.table_widget_1.horizontalHeader().sortIndicatorChanged.connect(self.sorting_event_1)
         self.ui.table_widget_2.horizontalHeader().sortIndicatorChanged.connect(self.sorting_event_2)
         self.button_calender_1.clicked.connect(self.ui.calender_display_1)
-        self.button_calender_2.clicked.connect(self.ui.calender_display_2)
         self.button_calender_3.clicked.connect(self.ui.calender_display_3)
         self.ui.calender.selectionChanged.connect(self.calender_event)
         QApplication.instance().focusChanged.connect(self.focus_change)
+        self.ui.table_widget_2.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        self.ui.table_widget_2.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        self.ui.table_widget_1.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        self.ui.table_widget_1.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        self.ui.listWidget.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        self.ui.listWidget.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         
 
     def modifier(self):  # modify widgets, button before the window loads
@@ -206,12 +214,14 @@ class main_form(QMainWindow):
         self.ui.table_widget_1.setColumnWidth(2, 80)
         self.ui.table_widget_2.setColumnWidth(2, 80)
         self.ui.calender.hide()
-        self.ui.calender.setVerticalHeaderFormat(0)
         self.ui.box_ending_date.hide()
+        
+        self.ui.calender.setMaximumDate(QDate(int(self.today[0]), int(self.today[1]), int(self.today[2])))
+        self.ui.calender.setSelectedDate(QDate(int(self.today[0]), int(self.today[0]), 1))
         qr = self.frameGeometry()
         cp = QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
-        self.move(qr.topLeft())
+        self.move(qr.topLeft())        
 
     def new_buttons(self):
         self.button_calender_1.setText('📅')
@@ -219,12 +229,6 @@ class main_form(QMainWindow):
         actions = QWidgetAction(self.button_calender_1)
         actions.setDefaultWidget(self.button_calender_1)
         self.ui.box_starting_mess.addAction(actions, QLineEdit.TrailingPosition)
-
-        self.button_calender_2.setText('📅')
-        self.button_calender_2.setCursor(Qt.ArrowCursor)
-        actions = QWidgetAction(self.button_calender_2)
-        actions.setDefaultWidget(self.button_calender_2)
-        self.ui.box_ending_mess.addAction(actions, QLineEdit.TrailingPosition)
 
         self.button_calender_3.setText('📅')
         self.button_calender_3.setCursor(Qt.ArrowCursor)
@@ -234,7 +238,7 @@ class main_form(QMainWindow):
 
     def show_date_box(self):
         self.ui.calender.show()
-        self.ui.resize(628, 325) 
+        self.ui.resize(628, 588) 
         self.ui.box_ending_date.setMinimumSize(174, 35)
         self.ui.box_starting_mess.setMinimumSize(174, 35)
         self.ui.box_ending_date.resize(174, 35)
@@ -246,6 +250,9 @@ class main_form(QMainWindow):
         self.ui.box_ending_date.show()
         self.ui.label.setText('Start And End Date')
         self.ui.label_10.setText('Group Username/Link')
+        self.ui.box_starting_mess.setToolTip('Counting will start at the beginning of this date')
+        self.ui.box_ending_date.setToolTip('Counting will stop at the beginning of this date')
+        self.ui.box_ending_mess.setToolTip('Counting will happen at this group')
 
     def remove_date_box(self):
         self.ui.calender.hide()
@@ -259,18 +266,21 @@ class main_form(QMainWindow):
         self.ui.box_starting_mess.setPlaceholderText('Necessary: Message Link To Start From')
         self.ui.box_ending_mess.setPlaceholderText('Optional: Message Link to End At')
         if self.ui.box_starting_mess.text() == '':
-            self.button_clear_1.setText('Clear')
-            self.starting_paste = False
-        else:
             self.button_clear_1.setText('Paste')
             self.starting_paste = True
+        else:
+            self.button_clear_1.setText('Clear')
+            self.starting_paste = False
 
     def box_decider(self):
         starting_mess_text = self.ui.box_starting_mess.text()
         ending_date_text = self.ui.box_ending_date.text()
         date_entered = False
 
-        if '-' in ending_date_text or '-' in starting_mess_text:
+        if '-' in ending_date_text:
+            date_entered = True
+        
+        elif '-' in starting_mess_text and self.ui.box_ending_date.isVisible():
             date_entered = True
 
         if date_entered == True:
@@ -280,7 +290,6 @@ class main_form(QMainWindow):
                 self.remove_date_box()
             else:
                 self.show_date_box()
-        
 
     def calender_display_1(self):
         if self.ui.calender.isVisible():
@@ -295,20 +304,7 @@ class main_form(QMainWindow):
             self.ui.calender.show() 
             self.box_selected = 'box_starting_mess'
             self.box_decider()
-
-    def calender_display_2(self):
-        if self.ui.calender.isVisible():
-            self.ui.calender.hide()
-            self.ui.setMinimumSize(0,0) 
-            self.ui.resize(628, 325) 
-            self.box_selected = '' 
-            self.box_decider()
-            
-        else:
-            self.ui.resize(628, 588) 
-            self.ui.calender.show()
-            self.box_selected = 'box_ending_mess'
-            self.box_decider()
+            self.ui.box_starting_mess.setFocus()
 
     def calender_display_3(self):
         if self.ui.calender.isVisible():
@@ -323,11 +319,12 @@ class main_form(QMainWindow):
             self.ui.calender.show()
             self.box_selected = 'box_ending_date'
             self.box_decider()
+            self.ui.box_ending_date.setFocus()
 
     def focus_change(self, old, new):
         try:
             new_widg = new.objectName()
-            if new_widg == 'box_ending_mess' or new_widg == 'box_starting_mess' or new_widg == 'box_ending_date':
+            if new_widg == 'box_starting_mess' or new_widg == 'box_ending_date':
                 self.box_selected = new_widg
         except:
             pass
@@ -338,14 +335,12 @@ class main_form(QMainWindow):
             if self.box_selected == 'box_starting_mess':
                 self.ui.box_starting_mess.clear()
                 self.ui.box_starting_mess.setText(selected_date)
-            
-            elif self.box_selected == 'box_ending_mess':
-                self.ui.box_ending_mess.clear()
-                self.ui.box_ending_mess.setText(selected_date)
+                self.ui.box_starting_mess.setFocus()
 
             elif self.box_selected == 'box_ending_date':
                 self.ui.box_ending_date.clear()
                 self.ui.box_ending_date.setText(selected_date)
+                self.ui.box_ending_date.setFocus()
 
     def check_update(self):  # for opening the new version available form
         print('Current Version', version)
@@ -450,7 +445,7 @@ class main_form(QMainWindow):
         if self.ui.tabWidget.currentIndex() == 1:
             self.resize(850, 400)
         else:
-            self.resize(400, 350)
+            self.ui.resize(628, 325) 
 
     def text_changed_starting(self):
         # if text box empty, paste from clipboard on click
@@ -459,7 +454,7 @@ class main_form(QMainWindow):
         text = self.ui.box_starting_mess.text()
         if self.ui.box_ending_date.isVisible():
             self.ui.button_clear_1.setText('Clear')
-            self.starting_paste = True
+            self.starting_paste = False
         else:
             if text == '':
                 self.ui.button_clear_1.setText('Paste')
@@ -626,6 +621,12 @@ class main_form(QMainWindow):
 
                     if ending_data != '' and self.group_name_2 != self.group_name:
                         self.ui.statusBar().showMessage(f'Starting and Ending Group is not the same!')
+                    
+                    elif self.group_starting > self.group_ending and self.group_ending != 0:
+                        self.ui.statusBar().showMessage(f'Starting Message ID cannot be bigger than ending message ID')
+
+                    elif self.group_starting == self.group_ending-1:
+                        self.ui.statusBar().showMessage(f'Starting and Ending Message ID cannot be the same!')
                     else:
                         self.client_starter()
             except Exception as e:
@@ -634,7 +635,54 @@ class main_form(QMainWindow):
                     f'Make sure the links are in correct format. Example: https://t.me/TestGroup/123456 or https://t.me/c/123456/123456')
 
     def datetime_parser(self):
-        pass
+        self.starting_date = self.ui.box_starting_mess.text().split('-')
+        self.starting_date = datetime.datetime(int(self.starting_date[2]), int(self.starting_date[1]), int(self.starting_date[0])) - datetime.timedelta(days=1)
+        self.ending_date = self.ui.box_ending_date.text().split('-')
+
+        self.group_name = self.ui.box_ending_mess.text()
+
+        self.cu_session = self.ui.combobox_session.currentText()
+
+        if self.ui.checkbox_multi_sess.isChecked():
+            self.multi_sess_selected = True
+        else:
+            self.multi_sess_selected = False
+
+        if self.ui.check_create_log.isChecked():
+                self.create_log = True
+        else:
+            self.create_log = False
+
+        if self.ending_date == ['']:
+            self.ending_date = datetime.datetime.today()
+        else:
+            self.ending_date = datetime.datetime(int(self.ending_date[2]), int(self.ending_date[1]), int(self.ending_date[0]))
+        
+        if '/c/' in self.group_name:
+            self.ui.statusBar().showMessage(f'Private Group Detected')
+            self.pri_group = True
+            self.group_name = self.group_name.replace('https://t.me/c/', '')
+            self.group_name = "".join(self.group_name.split())
+
+        elif 't.me' in self.group_name:
+            self.group_name = self.group_name.replace('https://t.me/', '')
+            self.group_name = "".join(self.group_name.split())
+    
+        if '/' in self.group_name:
+            self.group_name = self.group_name.split('/')[0]
+        
+        elif '@' in self.group_name:
+            self.group_name = self.group_name.split('@')[1]
+
+        if self.starting_date == self.ending_date:
+            self.ui.statusBar().showMessage('Start and Ending date cannot be the same')
+
+        elif self.starting_date > self.ending_date:
+            self.ui.statusBar().showMessage('Start date cannot be smaller than ending date')
+        elif self.group_name == '':
+            self.ui.statusBar().showMessage('Group Username cannot be empty')
+        else:
+            self.client_starter()
 
     def disable_widgets(self):
         # disables widgets. used for if during multi
@@ -669,6 +717,8 @@ class main_form(QMainWindow):
         self.group_name_2 = ''
         self.group_starting = 0
         self.group_ending = 0
+        self.starting_date = ''
+        self.ending_date = ''
         self.cu_session = ''
         self.running = False
         self.finishing_log = False
@@ -706,7 +756,10 @@ class main_form(QMainWindow):
         print(
             f'Bar Value: {list_data[0]}, Total Message: {list_data[1]}, Counter: {list_data[2]}')
         self.progress_bar(int(list_data[0]))
-        self.label_changer(int(list_data[1]), int(list_data[2]))
+        if int(list_data[1]) == -1:
+            self.label_changer(0, 0)
+        else:
+            self.label_changer(int(list_data[1]), int(list_data[2]))
         self.counting_label()
 
     def data_distributor_multi(self, list_data):
@@ -737,7 +790,11 @@ class main_form(QMainWindow):
         for i in self.cu_kpi_mess:
             tot_kpi += self.cu_kpi_mess[i]
         self.progress_bar(bar_value)
-        self.label_changer(tot_mess, tot_kpi)
+
+        if tot_mess == -1:
+            self.label_changer(0, 0)
+        else:
+            self.label_changer(tot_mess, tot_kpi)
         self.counting_label()
 
     def progress_bar(self, num):
@@ -820,6 +877,12 @@ class main_form(QMainWindow):
             self.ui.total_1.setText(f'Total KPI: 0') 
             self.ui.statusBar().showMessage(
                 'Incomplete Session. Please create one with Create Session button')
+            
+        if total_num[0] == 'error':
+            self.ui.total_2.setText(f'Total Message: 0')
+            self.ui.total_1.setText(f'Total KPI: 0') 
+            self.ui.statusBar().showMessage(
+                total_num[1])
         else:
             self.finishing_data[total_num[2]] = [total_num[0], total_num[1]]
             new_all_num = 0
@@ -899,6 +962,10 @@ class main_form(QMainWindow):
         self.mess_id_latest = id_num
         self.thread_timer.setInterval(1000)
 
+    def date_message_id(self, id_nums):
+        self.group_starting = id_nums[0]
+        self.group_ending = id_nums[1]
+
     def client_starter(self):
         #reset variables, table rows, labels
         #detects multi session or single session
@@ -932,9 +999,14 @@ class main_form(QMainWindow):
             available_sess = self.session_list
             for i in available_sess:
                 self.ui.statusBar().showMessage(f'Verifying Session {i}')
-                self.worker = session_verifier(self.group_name, i, self.pri_group)
+                if self.ui.calender.isVisible():
+                    self.worker = session_verifier(self.group_name, self.cu_session, self.pri_group, date_added=True, start_date=self.starting_date, end_date=self.ending_date)
+                else:
+                    self.worker = session_verifier(self.group_name, i, self.pri_group)
                 self.worker.signal.incomplete_sess.connect(self.incom_sess)
+                self.worker.signal.finished.connect(self.finishing)
                 self.worker.signal.latest_mess.connect(self.latest_mess_id)
+                self.worker.signal.date_mess_ids.connect(self.date_message_id)
                 pool.start(self.worker)
                 
             try:
@@ -947,9 +1019,14 @@ class main_form(QMainWindow):
 
         else:
             pool = QThreadPool.globalInstance()
-            self.worker = session_verifier(self.group_name, self.cu_session, self.pri_group)
+            if self.ui.calender.isVisible():
+                self.worker = session_verifier(self.group_name, self.cu_session, self.pri_group, date_added=True, start_date=self.starting_date, end_date=self.ending_date)
+            else:
+                self.worker = session_verifier(self.group_name, self.cu_session, self.pri_group)
             self.worker.signal.incomplete_sess.connect(self.incom_sess)
+            self.worker.signal.finished.connect(self.finishing)
             self.worker.signal.latest_mess.connect(self.latest_mess_id)
+            self.worker.signal.date_mess_ids.connect(self.date_message_id)
             pool.start(self.worker)
             self.ui.statusBar().showMessage(f'Verifying Session {self.cu_session}')
             try:
@@ -966,6 +1043,7 @@ class main_form(QMainWindow):
         #if private group is joined if selected
 
         if self.mess_id_latest != 0:
+            print(self.mess_id_latest)
             self.thread_timer.stop()
         
         elif self.cu_session in self.incomplete_sess and self.pri_group == True:
@@ -993,7 +1071,6 @@ class main_form(QMainWindow):
         threadCount = QThreadPool.globalInstance().maxThreadCount()
         pool = QThreadPool.globalInstance()
         for i in range(threadCount):
-            
             self.worker = Worker(self.group_name, self.group_starting,
                              self.mess_id_latest,
                              self.cu_session, self.create_log, 1, 1, mess_value=message_value, multi_sess=False, max_bar=100)
@@ -1095,6 +1172,7 @@ class worker_signals(QObject):
     mess_value = pyqtSignal(object)
     latest_mess = pyqtSignal(int)
     incomplete_sess = pyqtSignal(str)
+    date_mess_ids = pyqtSignal(list)
 
 class Worker(QRunnable):
     def __init__(self, group_name, group_starting,
@@ -1305,12 +1383,15 @@ class Worker(QRunnable):
         loop.run_until_complete(kpi_counter())
 
 class session_verifier(QRunnable):
-    def __init__(self, group_name, session_name, private_group):
+    def __init__(self, group_name, session_name, private_group, date_added=False, start_date='', end_date=''):
         super().__init__()
         self.pending = 0
         self.cu_session = session_name
         self.group_name = group_name
         self.private_group = private_group
+        self.date_added = date_added
+        self.start_date = start_date
+        self.end_date = end_date
         self.signal = worker_signals()
 
     @pyqtSlot()
@@ -1327,6 +1408,18 @@ class session_verifier(QRunnable):
                 else:
                     #verifies session whether it can be used for counting
                     async with client:
+
+                        if self.date_added == True:
+                            start_mess = 0
+                            end_mess = 0
+                            async for message in client.iter_messages(self.group_name, offset_date=self.start_date):
+                                start_mess = message.id+1
+                                break
+                            async for message in client.iter_messages(self.group_name, offset_date=self.end_date):
+                                end_mess = message.id+1
+                                break
+                            self.signal.date_mess_ids.emit([start_mess, end_mess])
+
                         if self.private_group == True:
                             group_list = []
                             async for group in client.iter_dialogs():
@@ -1335,7 +1428,6 @@ class session_verifier(QRunnable):
                         if self.private_group == True and self.group_name in group_list:
                             async for message in client.iter_messages(self.group_name):
                                 self.signal.latest_mess.emit(message.id)
-                                print(message.id)
                                 break
 
                         elif self.private_group == True and self.group_name not in group_list:
@@ -1345,7 +1437,6 @@ class session_verifier(QRunnable):
                         elif self.private_group == False:
                             async for message in client.iter_messages(self.group_name):
                                 self.signal.latest_mess.emit(message.id)
-                                print(message.id)
                                 break
 
                 await client.disconnect()
@@ -1353,8 +1444,9 @@ class session_verifier(QRunnable):
                     await client.disconnected
                 except Exception:
                     print('Error on disconnect')
-            except Exception:
-                pass
+            except Exception as e:
+                print(e)
+                self.signal.finished.emit(['error', 'Something Went Wrong'])
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
