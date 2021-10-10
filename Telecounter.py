@@ -14,11 +14,13 @@ from PyQt5.QtWidgets import QApplication, QLineEdit, \
 from PyQt5.QtCore import QRunnable, QThread, pyqtSignal, \
     QObject, Qt, QTimer, QThreadPool, pyqtSlot, QDate
 from PyQt5.QtGui import *
+from PyQt5.QtChart import QChart, QChartView, QLineSeries
 from telethon import TelegramClient
 import asyncio
 import pickle
 from session_creator import *
 from id_manager import *
+from Chart_Design import *
 
 #[ ] add charting based on kpi and all other users
 #[x] count message based on dates
@@ -97,7 +99,7 @@ class main_form(QMainWindow):
 
         self.manager = id_manager(self.ui)
         self.sess = session_builder(self.ui)
-
+        self.log_chart = create_chart(self.ui)
         self.group_name = ''
         self.group_name_2 = ''
         self.cu_session = ''
@@ -307,6 +309,9 @@ class main_form(QMainWindow):
             self.box_selected = 'box_starting_mess'
             self.box_decider()
             self.ui.box_starting_mess.setFocus()
+            selected_date = self.ui.calender.selectedDate().toString("dd-MM-yyyy")
+            self.ui.box_starting_mess.clear()
+            self.ui.box_starting_mess.setText(selected_date)
 
     def calender_display_3(self):
         if self.ui.calender.isVisible():
@@ -322,6 +327,9 @@ class main_form(QMainWindow):
             self.box_selected = 'box_ending_date'
             self.box_decider()
             self.ui.box_ending_date.setFocus()
+            selected_date = self.ui.calender.selectedDate().toString("dd-MM-yyyy")
+            self.ui.box_ending_date.clear()
+            self.ui.box_ending_date.setText(selected_date)
 
     def focus_change(self, old, new):
         try:
@@ -758,7 +766,7 @@ class main_form(QMainWindow):
         print(
             f'Bar Value: {list_data[0]}, Total Message: {list_data[1]}, Counter: {list_data[2]}')
         self.progress_bar(int(list_data[0]))
-        if int(list_data[1]) >= -1:
+        if int(list_data[1]) <= -1:
             self.label_changer(0, 0)
         else:
             self.label_changer(int(list_data[1]), int(list_data[2]))
@@ -795,7 +803,7 @@ class main_form(QMainWindow):
             tot_kpi += self.cu_kpi_mess[i]
         self.progress_bar(bar_value)
 
-        if tot_mess >= -1:
+        if tot_mess <= -1:
             self.label_changer(0, 0)
         else:
             self.label_changer(tot_mess, tot_kpi)
@@ -1219,10 +1227,10 @@ class Worker(QRunnable):
 
             else:
                 async with client:
-                    #start iterating fromt the selected message links
+                    #start iterating from the selected message links
                     async for message in client.iter_messages(self.group_name,
                                         offset_id=self.group_ending):
-
+                        #print(message.date)
                         if stop_process == True:
                             #for stopping the thread during processing
                             return
