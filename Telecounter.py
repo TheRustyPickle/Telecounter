@@ -139,6 +139,7 @@ class main_form(QMainWindow):
         self.cu_bar_value = {}
         self.cu_total_mess = {}
         self.cu_kpi_mess = {}
+        self.date_counts = {}
         
         self.incomplete_sess = []
         self.session_list = []
@@ -573,6 +574,7 @@ class main_form(QMainWindow):
         # or for invalid link
 
         if '-' in self.ui.box_starting_mess.text():
+    
             self.datetime_parser()
         else:
             if self.ui.check_create_log.isChecked():
@@ -646,8 +648,28 @@ class main_form(QMainWindow):
 
     def datetime_parser(self):
         self.starting_date = self.ui.box_starting_mess.text().split('-')
-        self.starting_date = datetime.datetime(int(self.starting_date[2]), int(self.starting_date[1]), int(self.starting_date[0])) - datetime.timedelta(days=1)
+        self.starting_date = datetime.datetime(int(self.starting_date[2]), int(self.starting_date[1]), int(self.starting_date[0]))
         self.ending_date = self.ui.box_ending_date.text().split('-')
+
+        now = datetime.datetime.now()
+        local_now = now.astimezone()
+        local_tz = local_now.tzinfo
+        local_tzname = local_tz.tzname(local_now)
+
+        if '+' in local_tzname:
+            add_time = True
+        else:
+            add_time = False
+        
+        local_tzname = local_tzname.replace('+', '')
+        local_tzname = local_tzname.replace('-', '')
+        local_tzname = int("".join(local_tzname.split()))
+        time_difference = local_tzname * 60
+
+        if add_time == True:
+            self.starting_date -= datetime.timedelta(minutes=time_difference)
+        else:
+            self.starting_date += datetime.timedelta(minutes=time_difference)
 
         self.group_name = self.ui.box_ending_mess.text()
 
@@ -667,6 +689,13 @@ class main_form(QMainWindow):
             self.ending_date = datetime.datetime.today()
         else:
             self.ending_date = datetime.datetime(int(self.ending_date[2]), int(self.ending_date[1]), int(self.ending_date[0]))
+
+        self.ending_date += datetime.timedelta(days=1)
+
+        if add_time == True:
+            self.ending_date -= datetime.timedelta(minutes=time_difference)
+        else:
+            self.ending_date += datetime.timedelta(minutes=time_difference)
         
         if '/c/' in self.group_name:
             self.ui.statusBar().showMessage(f'Private Group Detected')
@@ -693,6 +722,14 @@ class main_form(QMainWindow):
             self.ui.statusBar().showMessage('Group Username cannot be empty')
         else:
             self.client_starter()
+
+    def date_messages(self, data):
+        for i in data:
+            if i in self.date_counts:
+                self.date_counts[i] += data[i]
+            else:
+                self.date_counts[i] = data[i]
+        #self.log_chart.add_to_series(self.date_counts)
 
     def disable_widgets(self):
         # disables widgets. used for if during multi
@@ -795,9 +832,10 @@ class main_form(QMainWindow):
             bar_value = 100
 
         for i in self.cu_total_mess:
-            if i >= -1:
-                i = 0
-            tot_mess += self.cu_total_mess[i]
+            if self.cu_total_mess[i] <= -1:
+                pass
+            else:
+                tot_mess += self.cu_total_mess[i]
 
         for i in self.cu_kpi_mess:
             tot_kpi += self.cu_kpi_mess[i]
@@ -836,6 +874,8 @@ class main_form(QMainWindow):
             pass
         else:
             self.row_timer.stop()
+            self.log_chart.remvove_widget()
+            self.log_chart.create_chart(self.date_counts)
             for i in self.all_log_row:
                 name = QtWidgets.QTableWidgetItem(str(self.all_log_row[i][0]))
                 username = QtWidgets.QTableWidgetItem(str(self.all_log_row[i][1]))
@@ -1011,7 +1051,7 @@ class main_form(QMainWindow):
             available_sess = self.session_list
             for i in available_sess:
                 self.ui.statusBar().showMessage(f'Verifying Session {i}')
-                if self.ui.calender.isVisible():
+                if self.ui.calender.isVisible() or '-' in self.ui.box_starting_mess.text():
                     self.worker = session_verifier(self.group_name, self.cu_session, self.pri_group, date_added=True, start_date=self.starting_date, end_date=self.ending_date)
                 else:
                     self.worker = session_verifier(self.group_name, i, self.pri_group)
@@ -1031,7 +1071,7 @@ class main_form(QMainWindow):
 
         else:
             pool = QThreadPool.globalInstance()
-            if self.ui.calender.isVisible():
+            if self.ui.calender.isVisible() or '-' in self.ui.box_starting_mess.text():
                 self.worker = session_verifier(self.group_name, self.cu_session, self.pri_group, date_added=True, start_date=self.starting_date, end_date=self.ending_date)
             else:
                 self.worker = session_verifier(self.group_name, self.cu_session, self.pri_group)
@@ -1092,6 +1132,7 @@ class main_form(QMainWindow):
             self.worker.signal.row_data_2.connect(self.set_row_data_kpi)
             self.worker.signal.mess_char.connect(self.total_mess_saver)
             self.worker.signal.finished.connect(self.finishing)
+            self.worker.signal.date_counts.connect(self.date_messages)
             pool.start(self.worker)
             break
     
@@ -1168,6 +1209,7 @@ class main_form(QMainWindow):
             self.worker.signal.row_data_2.connect(self.set_row_data_kpi)
             self.worker.signal.mess_char.connect(self.total_mess_saver)
             self.worker.signal.finished.connect(self.finishing)
+            self.worker.signal.date_counts.connect(self.date_messages)
             pool.start(self.worker)
             if thread_num >= int(threadCount):
                 break
@@ -1185,6 +1227,7 @@ class worker_signals(QObject):
     latest_mess = pyqtSignal(int)
     incomplete_sess = pyqtSignal(str)
     date_mess_ids = pyqtSignal(list)
+    date_counts = pyqtSignal(dict)
 
 class Worker(QRunnable):
     def __init__(self, group_name, group_starting,
@@ -1210,6 +1253,7 @@ class Worker(QRunnable):
         self.total_thread = total_thread
         self.multi_sess = multi_sess
         self.max_bar = max_bar
+        self.date_mess_count = {}
         self.signal = worker_signals()
         print(self.group_name, self.group_starting, self.group_ending, self.thread_num)
 
@@ -1230,7 +1274,16 @@ class Worker(QRunnable):
                     #start iterating from the selected message links
                     async for message in client.iter_messages(self.group_name,
                                         offset_id=self.group_ending):
-                        #print(message.date)
+                                    
+                        try:
+                            date_today = message.date.strftime("%m-%d-%Y")
+                            if date_today in self.date_mess_count:
+                                self.date_mess_count[date_today] += 1
+                            else:
+                                self.date_mess_count[date_today] = 1
+                        except:
+                            pass
+
                         if stop_process == True:
                             #for stopping the thread during processing
                             return
@@ -1337,6 +1390,7 @@ class Worker(QRunnable):
 
                     self.signal.progress.emit(
                         [self.bar, self.total_mess, self.counter, self.thread_num])
+                    self.signal.date_counts.emit(self.date_mess_count)
 
                     total_all = 0
                     total_kpi = 0
@@ -1430,6 +1484,7 @@ class session_verifier(QRunnable):
                             async for message in client.iter_messages(self.group_name, offset_date=self.end_date):
                                 end_mess = message.id+1
                                 break
+                            print('Start', start_mess, 'End', end_mess)
                             self.signal.date_mess_ids.emit([start_mess, end_mess])
 
                         if self.private_group == True:
