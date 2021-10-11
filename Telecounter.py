@@ -22,13 +22,8 @@ from session_creator import *
 from id_manager import *
 from Chart_Design import *
 
-#[ ] add charting based on kpi and all other users
-#[x] count message based on dates
-#[ ] add extra features to delete joining messages
-#[ ] create logging system
 
-
-version = 'v2.0'
+version = 'v2.1'
 new_version = ''
 stop_process = False
 
@@ -39,7 +34,7 @@ def version_check():  # for checking new releases on github
             "https://api.github.com/repos/Sakib0194/Telecounter/releases/latest")
         new_version = response.json()["name"]
     except:
-        new_version = 'v2.0'
+        new_version = 'v2.1'
 
 Thread(target=version_check).start()
 
@@ -140,6 +135,7 @@ class main_form(QMainWindow):
         self.cu_total_mess = {}
         self.cu_kpi_mess = {}
         self.date_counts = {}
+        self.date_counts_kpi = {}
         
         self.incomplete_sess = []
         self.session_list = []
@@ -221,6 +217,7 @@ class main_form(QMainWindow):
         
         self.ui.calender.setMaximumDate(QDate(int(self.today[0]), int(self.today[1]), int(self.today[2])))
         self.ui.calender.setSelectedDate(QDate(int(self.today[0]), int(self.today[0]), 1))
+
         qr = self.frameGeometry()
         cp = QDesktopWidget().availableGeometry().center()
         qr.moveCenter(cp)
@@ -243,6 +240,7 @@ class main_form(QMainWindow):
         self.ui.calender.show()
         self.ui.resize(628, 588) 
         self.ui.box_ending_date.setMinimumSize(174, 35)
+        self.ui.box_ending_date.setMaximumSize(16777215, 35)
         self.ui.box_starting_mess.setMinimumSize(174, 35)
         self.ui.box_ending_date.resize(174, 35)
         self.ui.box_starting_mess.resize(174, 35)
@@ -263,6 +261,7 @@ class main_form(QMainWindow):
         self.ui.box_ending_date.hide()
         self.ui.box_ending_date.clear()
         self.ui.box_starting_mess.setMinimumSize(350, 35)
+        self.ui.box_ending_date.setMaximumSize(0, 35)
         self.ui.button_clear_1.show()
         self.ui.label.setText('Starting Message Link')
         self.ui.label_10.setText('Ending Message Link')
@@ -353,7 +352,7 @@ class main_form(QMainWindow):
                 self.ui.box_ending_date.setText(selected_date)
                 self.ui.box_ending_date.setFocus()
 
-    def check_update(self):  # for opening the new version available form
+    def check_update(self):  # for opening the new version available window
         print('Current Version', version)
         version_num = float(version.split('v')[1])
         new_version_num = float(new_version.split('v')[1])
@@ -366,10 +365,10 @@ class main_form(QMainWindow):
         self.clear_statusbar.stop()
         self.ui.statusBar().clearMessage()
 
-    def sorting_event_1(self):  #triggered when clicking on table column buttons
+    def sorting_event_1(self):  #triggered when clicking on table column buttons for sorting
         self.ui.table_widget_1.clearSelection()
     
-    def sorting_event_2(self):
+    def sorting_event_2(self):  #triggered when clicking on table column buttons for sorting
         self.ui.table_widget_2.clearSelection()
 
     def cell_copier(self):  #copies cells selected in the table widget
@@ -460,7 +459,7 @@ class main_form(QMainWindow):
 
     def text_changed_starting(self):
         # if text box empty, paste from clipboard on click
-        # if text box has text, clearself.all_log_row box on click
+        # if text box has text, clear box on click
 
         text = self.ui.box_starting_mess.text()
         if self.ui.box_ending_date.isVisible():
@@ -475,6 +474,9 @@ class main_form(QMainWindow):
                 self.starting_paste = False
 
     def text_changed_ending(self):
+        # if text box empty, paste from clipboard on click
+        # if text box has text, clear box on click
+
         text = self.ui.box_ending_mess.text()
         if text == '':
             self.ui.button_clear_2.setText('Paste')
@@ -561,7 +563,7 @@ class main_form(QMainWindow):
             else:
                 self.ui.box_starting_mess.clear()
 
-    def edit_box_2(self):
+    def edit_box_2(self):   #Paste/Clear button on Message Box
         if self.ending_paste is True:
             self.ui.box_ending_mess.setText(str(pyperclip.paste()))
         else:
@@ -574,8 +576,9 @@ class main_form(QMainWindow):
         # or for invalid link
 
         if '-' in self.ui.box_starting_mess.text():
-    
             self.datetime_parser()
+            #send to datetime parsing if a date was entered
+
         else:
             if self.ui.check_create_log.isChecked():
                 self.create_log = True
@@ -589,7 +592,7 @@ class main_form(QMainWindow):
 
             starting_data = self.ui.box_starting_mess.text()
             starting_data = "".join(starting_data.split())
-            if '/c/' in starting_data:
+            if '/c/' in starting_data:  #/c/ is included in private group links
                 self.ui.statusBar().showMessage(f'Private Group Detected')
                 self.pri_group = True
 
@@ -661,7 +664,10 @@ class main_form(QMainWindow):
         else:
             add_time = False
         
-        local_tzname = local_tzname.replace('+', '')
+        #add or remove time based on time zone
+        #default time is UTC +0. If not done
+
+        local_tzname = local_tzname.replace('+', '')    
         local_tzname = local_tzname.replace('-', '')
         local_tzname = int("".join(local_tzname.split()))
         time_difference = local_tzname * 60
@@ -724,12 +730,18 @@ class main_form(QMainWindow):
             self.client_starter()
 
     def date_messages(self, data):
-        for i in data:
+        #date count history to pass to the designer
+        for i in data[0]:
             if i in self.date_counts:
-                self.date_counts[i] += data[i]
+                self.date_counts[i] += data[0][i]
             else:
-                self.date_counts[i] = data[i]
-        #self.log_chart.add_to_series(self.date_counts)
+                self.date_counts[i] = data[0][i]
+
+        for i in data[1]:
+            if i in self.date_counts_kpi:
+                self.date_counts_kpi[i] += data[1][i]
+            else:
+                self.date_counts_kpi[i] = data[1][i]
 
     def disable_widgets(self):
         # disables widgets. used for if during multi
@@ -772,6 +784,7 @@ class main_form(QMainWindow):
         self.force_stop = 3
         self.counting_time = 1
         self.cu_dots = ''
+        self.incomplete_sess = []
 
     def counting_label(self):
         #sets status bar label
@@ -875,7 +888,7 @@ class main_form(QMainWindow):
         else:
             self.row_timer.stop()
             self.log_chart.remvove_widget()
-            self.log_chart.create_chart(self.date_counts)
+            self.log_chart.create_chart(self.date_counts, self.date_counts_kpi)
             for i in self.all_log_row:
                 name = QtWidgets.QTableWidgetItem(str(self.all_log_row[i][0]))
                 username = QtWidgets.QTableWidgetItem(str(self.all_log_row[i][1]))
@@ -1012,7 +1025,7 @@ class main_form(QMainWindow):
 
     def latest_mess_id(self, id_num):
         self.mess_id_latest = id_num
-        self.thread_timer.setInterval(1000)
+        self.thread_timer.setInterval(500)
 
     def date_message_id(self, id_nums):
         self.group_starting = id_nums[0]
@@ -1052,7 +1065,7 @@ class main_form(QMainWindow):
             for i in available_sess:
                 self.ui.statusBar().showMessage(f'Verifying Session {i}')
                 if self.ui.calender.isVisible() or '-' in self.ui.box_starting_mess.text():
-                    self.worker = session_verifier(self.group_name, self.cu_session, self.pri_group, date_added=True, start_date=self.starting_date, end_date=self.ending_date)
+                    self.worker = session_verifier(self.group_name, i, self.pri_group, date_added=True, start_date=self.starting_date, end_date=self.ending_date)
                 else:
                     self.worker = session_verifier(self.group_name, i, self.pri_group)
                 self.worker.signal.incomplete_sess.connect(self.incom_sess)
@@ -1097,6 +1110,12 @@ class main_form(QMainWindow):
         if self.mess_id_latest != 0:
             print(self.mess_id_latest)
             self.thread_timer.stop()
+
+        elif self.mess_id_latest == 0 and self.cu_session in self.incomplete_sess:
+            self.thread_timer.stop()
+            self.ui.statusBar().showMessage(f'{self.cu_session} Incomplete Session or Invalid Group')
+            self.enable_widgets()
+            return
         
         elif self.cu_session in self.incomplete_sess and self.pri_group == True:
             self.thread_timer.stop()
@@ -1144,6 +1163,12 @@ class main_form(QMainWindow):
         #thread accordingly
         if self.mess_id_latest != 0:
             self.thread_timer.stop()
+
+        elif self.mess_id_latest == 0 and len(self.session_list) == len(self.incomplete_sess):
+            self.thread_timer.stop()
+            self.ui.statusBar().showMessage(f'{self.cu_session} Incomplete Session or Invalid Group')
+            self.enable_widgets()
+            return
 
         elif self.session_list == self.incomplete_sess:
             self.ui.statusBar().showMessage(f'Could not work with any available session')
@@ -1227,7 +1252,7 @@ class worker_signals(QObject):
     latest_mess = pyqtSignal(int)
     incomplete_sess = pyqtSignal(str)
     date_mess_ids = pyqtSignal(list)
-    date_counts = pyqtSignal(dict)
+    date_counts = pyqtSignal(list)
 
 class Worker(QRunnable):
     def __init__(self, group_name, group_starting,
@@ -1254,6 +1279,7 @@ class Worker(QRunnable):
         self.multi_sess = multi_sess
         self.max_bar = max_bar
         self.date_mess_count = {}
+        self.kpi_mess_count = {}
         self.signal = worker_signals()
         print(self.group_name, self.group_starting, self.group_ending, self.thread_num)
 
@@ -1335,6 +1361,14 @@ class Worker(QRunnable):
                                         try:
                                             if message.from_id.user_id in accounts:
                                                 self.counter += 1
+                                                try:
+                                                    date_today = message.date.strftime("%m-%d-%Y")
+                                                    if date_today in self.kpi_mess_count:
+                                                        self.kpi_mess_count[date_today] += 1
+                                                    else:
+                                                        self.kpi_mess_count[date_today] = 1
+                                                except:
+                                                    pass
                                         except Exception as e:
                                             print(e)
 
@@ -1390,7 +1424,8 @@ class Worker(QRunnable):
 
                     self.signal.progress.emit(
                         [self.bar, self.total_mess, self.counter, self.thread_num])
-                    self.signal.date_counts.emit(self.date_mess_count)
+
+                    self.signal.date_counts.emit([self.date_mess_count, self.kpi_mess_count])
 
                     total_all = 0
                     total_kpi = 0
@@ -1513,7 +1548,7 @@ class session_verifier(QRunnable):
                     print('Error on disconnect')
             except Exception as e:
                 print(e)
-                self.signal.finished.emit(['error', 'Something Went Wrong'])
+                self.signal.incomplete_sess.emit(f'{self.cu_session} is incomplete')
 
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)

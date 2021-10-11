@@ -461,7 +461,7 @@ color: #48E48F
             </property>
             <property name="maximumSize">
              <size>
-              <width>350</width>
+              <width>16777215</width>
               <height>35</height>
              </size>
             </property>
@@ -616,7 +616,7 @@ color: #48E48F
             </property>
             <property name="maximumSize">
              <size>
-              <width>350</width>
+              <width>16777215</width>
               <height>35</height>
              </size>
             </property>
