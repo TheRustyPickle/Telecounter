@@ -454,6 +454,8 @@ class main_form(QMainWindow):
 
         if self.ui.tabWidget.currentIndex() == 1:
             self.resize(850, 400)
+        elif self.ui.tabWidget.currentIndex() == 2:
+            self.resize(750, 550)
         else:
             self.ui.resize(628, 325) 
 

@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget
 from PyQt5.QtChart import QChart, QChartView, QLineSeries, QValueAxis, QCategoryAxis
-from PyQt5.QtGui import QPainter
+from PyQt5.QtGui import QPainter, QPen
 from PyQt5.QtCore import Qt
  
  
@@ -23,6 +23,11 @@ class create_chart(QWidget):
         axis_X = QValueAxis()
         axis_Y = QValueAxis()
         x_label = QCategoryAxis()
+        blue_col = QPen(Qt.blue)
+        blue_col.setWidth(1)
+
+        green_col = QPen(Qt.green)
+        green_col.setWidth(1)
 
         starting_point_X = 0
         kpi_point_X = 0
@@ -57,6 +62,8 @@ class create_chart(QWidget):
             
         chart.addSeries(series_2)
         chart.addSeries(series)
+        series.setPen(blue_col)
+        series_2.setPen(green_col)
         axis_X.setTickCount(10)
         axis_Y.setTickCount(8)
         chart.addAxis(axis_X, Qt.AlignBottom)
@@ -67,13 +74,12 @@ class create_chart(QWidget):
         series_2.attachAxis(axis_X)
         series_2.attachAxis(axis_Y)
         axis_X.setRange(0, len(data)-1)
-        axis_Y.setRange(-y_biggest/4, y_biggest+(y_biggest*0.1))
+        axis_Y.setRange(0, y_biggest+(y_biggest*0.1))
 
-        
-        
+        chart.legend().setVisible(False)
         chart.setAxisX(x_label, series)
         chart.setAnimationOptions(QChart.AllAnimations)
-        chart.setTitle("Line Chart Example")
+        chart.setTitle("Message Count Comparison Chart")
         chartview = QChartView(chart)
         chartview.setRenderHint(QPainter.Antialiasing)
         self.cu_widget = chartview
