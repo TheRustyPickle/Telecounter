@@ -16,13 +16,14 @@ class create_chart(QWidget):
             self.ui.verticalLayout_3.removeWidget(self.cu_widget)
 
     def create_chart(self, data, kpi_data):
-
+        data = dict(sorted(data.items()))
         series = QLineSeries(self)
         series_2 = QLineSeries(self)
         chart =  QChart()
         axis_X = QValueAxis()
         axis_Y = QValueAxis()
         x_label = QCategoryAxis()
+        y_label = QCategoryAxis()
         blue_col = QPen(Qt.blue)
         blue_col.setWidth(1)
 
@@ -38,12 +39,22 @@ class create_chart(QWidget):
         series.append(starting_point_X, starting_point_Y)
         x_value = 0
         y_biggest = 0
-        
+        next_x_label = 0
+        cu_next = 0
+
+        if len(data) > 10:
+            next_x_label = int(len(data) / 10)
+            cu_next = next_x_label
 
         for i in data:
             series.append(x_value, int(data[i]))
-            x_label.append(' ', x_value)    #to keep x axis lable hidden
 
+            if cu_next != 0:
+                cu_next -= 1
+            else:
+                x_label.append(f'{(str(i))[6:]}-{(str(i))[4:6]}', x_value)
+                cu_next = next_x_label
+                
             if x_value == 0:
                 if i in kpi_data:
                     kpi_point_Y = int(kpi_data[i])
@@ -59,13 +70,24 @@ class create_chart(QWidget):
             x_value += 1
             if int(data[i]) > y_biggest:
                 y_biggest = int(data[i])
-            
+        
+        next_y_label = int(y_biggest/10)
+        part_value = next_y_label
+
+        while next_y_label <= y_biggest:
+            y_label.append(f'{next_y_label}', next_y_label)
+            next_y_label += part_value
+        
+        if y_biggest - next_y_label < y_biggest + part_value:
+            next_y_label += part_value
+            y_label.append(f'{next_y_label}', next_y_label)
+
         chart.addSeries(series_2)
         chart.addSeries(series)
         series.setPen(blue_col)
         series_2.setPen(green_col)
         axis_X.setTickCount(10)
-        axis_Y.setTickCount(8)
+        axis_Y.setTickCount(10)
         chart.addAxis(axis_X, Qt.AlignBottom)
         chart.addAxis(axis_Y, Qt.AlignLeft)
 
@@ -78,6 +100,7 @@ class create_chart(QWidget):
 
         chart.legend().setVisible(False)
         chart.setAxisX(x_label, series)
+        chart.setAxisY(y_label, series)
         chart.setAnimationOptions(QChart.AllAnimations)
         chart.setTitle("Message Count Comparison Chart")
         chartview = QChartView(chart)

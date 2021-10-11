@@ -1304,7 +1304,7 @@ class Worker(QRunnable):
                                         offset_id=self.group_ending):
                                     
                         try:
-                            date_today = message.date.strftime("%m-%d-%Y")
+                            date_today = int(message.date.strftime("%Y%m%d"))
                             if date_today in self.date_mess_count:
                                 self.date_mess_count[date_today] += 1
                             else:
@@ -1364,7 +1364,7 @@ class Worker(QRunnable):
                                             if message.from_id.user_id in accounts:
                                                 self.counter += 1
                                                 try:
-                                                    date_today = message.date.strftime("%m-%d-%Y")
+                                                    date_today = int(message.date.strftime("%Y%m%d"))
                                                     if date_today in self.kpi_mess_count:
                                                         self.kpi_mess_count[date_today] += 1
                                                     else:
