@@ -22,6 +22,13 @@ from session_creator import *
 from id_manager import *
 from Chart_Design import *
 
+#[ ]switch to pyqtgraph
+#[ ]add a crosshair
+#[ ]show value of x and y on hover
+#[ ]ability to show both hourly and day based chart
+#[ ]allow user_id/username to be added separately to the chart
+#[ ]change legend names
+#[ ]if hourly chart selected, show hours on top of the chart
 
 version = 'v2.1'
 new_version = ''
@@ -112,6 +119,7 @@ class main_form(QMainWindow):
         self.counting_time = 1
         self.mess_value = 0
         self.mess_id_latest = 0
+        self.time_difference = 0
         
         self.create_log = True
         self.multi_sess_selected = False
@@ -122,6 +130,7 @@ class main_form(QMainWindow):
         self.running = False
         self.finishing_log = False
         self.counting = False
+        self.add_time = False
 
         self.all_cell_selected = {}
         self.kpi_cell_selected = {}
@@ -582,6 +591,7 @@ class main_form(QMainWindow):
             #send to datetime parsing if a date was entered
 
         else:
+            self.cu_timezone()
             if self.ui.check_create_log.isChecked():
                 self.create_log = True
             else:
@@ -656,31 +666,14 @@ class main_form(QMainWindow):
         self.starting_date = datetime.datetime(int(self.starting_date[2]), int(self.starting_date[1]), int(self.starting_date[0]))
         self.ending_date = self.ui.box_ending_date.text().split('-')
 
-        now = datetime.datetime.now()
-        local_now = now.astimezone()
-        local_tz = local_now.tzinfo
-        local_tzname = local_tz.tzname(local_now)
+        self.cu_timezone()
 
-        if '+' in local_tzname:
-            add_time = True
+        if self.add_time == True:
+            self.starting_date -= datetime.timedelta(minutes=self.time_difference)
         else:
-            add_time = False
-        
-        #add or remove time based on time zone
-        #default time is UTC +0. If not done
-
-        local_tzname = local_tzname.replace('+', '')    
-        local_tzname = local_tzname.replace('-', '')
-        local_tzname = int("".join(local_tzname.split()))
-        time_difference = local_tzname * 60
-
-        if add_time == True:
-            self.starting_date -= datetime.timedelta(minutes=time_difference)
-        else:
-            self.starting_date += datetime.timedelta(minutes=time_difference)
+            self.starting_date += datetime.timedelta(minutes=self.time_difference)
 
         self.group_name = self.ui.box_ending_mess.text()
-
         self.cu_session = self.ui.combobox_session.currentText()
 
         if self.ui.checkbox_multi_sess.isChecked():
@@ -700,10 +693,10 @@ class main_form(QMainWindow):
 
         self.ending_date += datetime.timedelta(days=1)
 
-        if add_time == True:
-            self.ending_date -= datetime.timedelta(minutes=time_difference)
+        if self.add_time == True:
+            self.ending_date -= datetime.timedelta(minutes=self.time_difference)
         else:
-            self.ending_date += datetime.timedelta(minutes=time_difference)
+            self.ending_date += datetime.timedelta(minutes=self.time_difference)
         
         if '/c/' in self.group_name:
             self.ui.statusBar().showMessage(f'Private Group Detected')
@@ -730,6 +723,25 @@ class main_form(QMainWindow):
             self.ui.statusBar().showMessage('Group Username cannot be empty')
         else:
             self.client_starter()
+
+    def cu_timezone(self):
+        now = datetime.datetime.now()
+        local_now = now.astimezone()
+        local_tz = local_now.tzinfo
+        local_tzname = local_tz.tzname(local_now)
+
+        if '+' in local_tzname:
+            self.add_time = True
+        else:
+            self.add_time = False
+        
+        #add or remove time based on time zone
+        #default time is UTC +0. If not done
+
+        local_tzname = local_tzname.replace('+', '')    
+        local_tzname = local_tzname.replace('-', '')
+        local_tzname = int("".join(local_tzname.split()))
+        self.time_difference = local_tzname * 60
 
     def date_messages(self, data):
         #date count history to pass to the designer
@@ -888,6 +900,7 @@ class main_form(QMainWindow):
         if self.running == True:
             pass
         else:
+            self.enable_widgets()
             self.row_timer.stop()
             self.log_chart.remvove_widget()
             self.log_chart.create_chart(self.date_counts, self.date_counts_kpi)
@@ -937,7 +950,6 @@ class main_form(QMainWindow):
         #final function once the session ends
         #either it will set proper numer/text to the widgets
         #or show the error message
-
         self.enable_widgets()
         if total_num[0] == 'incomplete':
             self.ui.total_2.setText(f'Total Message: 0')
@@ -945,7 +957,7 @@ class main_form(QMainWindow):
             self.ui.statusBar().showMessage(
                 'Incomplete Session. Please create one with Create Session button')
             
-        if total_num[0] == 'error':
+        elif total_num[0] == 'error':
             self.ui.total_2.setText(f'Total Message: 0')
             self.ui.total_1.setText(f'Total KPI: 0') 
             self.ui.statusBar().showMessage(
@@ -1060,6 +1072,8 @@ class main_form(QMainWindow):
         self.all_log_row = {}
         self.kpi_log_row = {}
         self.finishing_data = {}
+        self.date_counts = {}
+        self.date_counts_kpi = {}
 
         if self.multi_sess_selected == True:
             pool = QThreadPool.globalInstance()
@@ -1146,7 +1160,9 @@ class main_form(QMainWindow):
         for i in range(threadCount):
             self.worker = Worker(self.group_name, self.group_starting,
                              self.mess_id_latest,
-                             self.cu_session, self.create_log, 1, 1, mess_value=message_value, multi_sess=False, max_bar=100)
+                             self.cu_session, self.create_log, 1, 1, 
+                             mess_value=message_value, multi_sess=False, 
+                             max_bar=100, add_time=self.add_time, time_difference=self.time_difference)
             self.worker.signal.progress.connect(self.data_distributor)
             self.worker.signal.list_size.connect(self.row_amount)
             self.worker.signal.row_data.connect(self.set_row_data)
@@ -1172,7 +1188,7 @@ class main_form(QMainWindow):
             self.enable_widgets()
             return
 
-        elif self.session_list == self.incomplete_sess:
+        elif len(self.session_list) == len(self.incomplete_sess):
             self.ui.statusBar().showMessage(f'Could not work with any available session')
             self.thread_timer.stop()
             self.enable_widgets()
@@ -1228,7 +1244,11 @@ class main_form(QMainWindow):
                 part_bar = final_part_value
             self.worker = Worker(self.group_name, parts_start[i],
                              parts_end[i],
-                             i, self.create_log, thread_num, len(available_sess), mess_value=message_value, multi_sess=True, max_bar=part_bar)
+                             i, self.create_log, thread_num, 
+                             len(available_sess), mess_value=message_value, 
+                             multi_sess=True, max_bar=part_bar,
+                             add_time=self.add_time, time_difference=self.time_difference)
+
             final_part_value -= part_bar
             self.worker.signal.progress.connect(self.data_distributor_multi)
             self.worker.signal.list_size.connect(self.row_amount)
@@ -1259,7 +1279,9 @@ class worker_signals(QObject):
 class Worker(QRunnable):
     def __init__(self, group_name, group_starting,
                  group_ending, session_name, create_log, 
-                 thread_num, total_thread, mess_value=0, multi_sess=False, max_bar=0):
+                 thread_num, total_thread, mess_value=0, 
+                 multi_sess=False, max_bar=0, add_time=False,
+                 time_difference=0):
         super().__init__()
         self.pending = 0
         self.cu_session = session_name
@@ -1282,6 +1304,9 @@ class Worker(QRunnable):
         self.max_bar = max_bar
         self.date_mess_count = {}
         self.kpi_mess_count = {}
+        self.add_time = add_time
+        self.time_difference = time_difference
+        self.date_today = ''
         self.signal = worker_signals()
         print(self.group_name, self.group_starting, self.group_ending, self.thread_num)
 
@@ -1304,13 +1329,20 @@ class Worker(QRunnable):
                                         offset_id=self.group_ending):
                                     
                         try:
-                            date_today = int(message.date.strftime("%Y%m%d"))
-                            if date_today in self.date_mess_count:
-                                self.date_mess_count[date_today] += 1
+                            self.date_today = message.date
+                            if self.add_time == True:
+                                self.date_today -= datetime.timedelta(minutes=self.time_difference)
                             else:
-                                self.date_mess_count[date_today] = 1
-                        except:
-                            pass
+                                self.date_today += datetime.timedelta(minutes=self.time_difference)
+
+                            int_date = int(self.date_today.strftime("%Y%m%d"))
+                            if int_date in self.date_mess_count:
+                                self.date_mess_count[int_date] += 1
+                            else:
+                                self.date_mess_count[int_date] = 1
+                        except Exception as e:
+                            print(e)
+                            print('Error while getting date')
 
                         if stop_process == True:
                             #for stopping the thread during processing
@@ -1363,15 +1395,15 @@ class Worker(QRunnable):
                                         try:
                                             if message.from_id.user_id in accounts:
                                                 self.counter += 1
-                                                try:
-                                                    date_today = int(message.date.strftime("%Y%m%d"))
-                                                    if date_today in self.kpi_mess_count:
-                                                        self.kpi_mess_count[date_today] += 1
-                                                    else:
-                                                        self.kpi_mess_count[date_today] = 1
-                                                except:
-                                                    pass
+
+                                                int_date = int(self.date_today.strftime("%Y%m%d"))
+                                                if int_date in self.kpi_mess_count:
+                                                    self.kpi_mess_count[int_date] += 1
+                                                else:
+                                                    self.kpi_mess_count[int_date] = 1
+
                                         except Exception as e:
+                                            print('Error while adding KPI Date')
                                             print(e)
 
                                     if self.pending > 1:
