@@ -14,7 +14,6 @@ from PyQt5.QtWidgets import QApplication, QLineEdit, \
 from PyQt5.QtCore import QRunnable, QThread, pyqtSignal, \
     QObject, Qt, QTimer, QThreadPool, pyqtSlot, QDate
 from PyQt5.QtGui import *
-from PyQt5.QtChart import QChart, QChartView, QLineSeries
 from telethon import TelegramClient
 import asyncio
 import pickle
@@ -22,12 +21,12 @@ from session_creator import *
 from id_manager import *
 from Chart_Design import *
 
-#[ ]switch to pyqtgraph
-#[ ]add a crosshair
-#[ ]show value of x and y on hover
+#[x]switch to pyqtgraph
+#[x]add a crosshair
+#[x]show value of x and y on hover
 #[ ]ability to show both hourly and day based chart
 #[ ]allow user_id/username to be added separately to the chart
-#[ ]change legend names
+#[x]change legend names
 #[ ]if hourly chart selected, show hours on top of the chart
 
 version = 'v2.1'
@@ -290,11 +289,14 @@ class main_form(QMainWindow):
         ending_date_text = self.ui.box_ending_date.text()
         date_entered = False
 
-        if '-' in ending_date_text:
+        if len(ending_date_text.split('-')) == 3:
             date_entered = True
         
-        elif '-' in starting_mess_text and self.ui.box_ending_date.isVisible():
+        elif len(starting_mess_text.split('-')) == 3 and self.ui.box_ending_date.isVisible():
             date_entered = True
+
+        else:
+            date_entered = False
 
         if date_entered == True:
             pass
@@ -333,12 +335,12 @@ class main_form(QMainWindow):
         else:
             self.ui.resize(628, 588) 
             self.ui.calender.show()
-            self.box_selected = 'box_ending_date'
+            self.box_selected = 'box_starting_mess'
             self.box_decider()
-            self.ui.box_ending_date.setFocus()
+            self.ui.box_starting_mess.setFocus()
             selected_date = self.ui.calender.selectedDate().toString("dd-MM-yyyy")
-            self.ui.box_ending_date.clear()
-            self.ui.box_ending_date.setText(selected_date)
+            self.ui.box_starting_mess.clear()
+            self.ui.box_starting_mess.setText(selected_date)
 
     def focus_change(self, old, new):
         try:
@@ -1327,22 +1329,6 @@ class Worker(QRunnable):
                     #start iterating from the selected message links
                     async for message in client.iter_messages(self.group_name,
                                         offset_id=self.group_ending):
-                                    
-                        try:
-                            self.date_today = message.date
-                            if self.add_time == True:
-                                self.date_today -= datetime.timedelta(minutes=self.time_difference)
-                            else:
-                                self.date_today += datetime.timedelta(minutes=self.time_difference)
-
-                            int_date = int(self.date_today.strftime("%Y%m%d"))
-                            if int_date in self.date_mess_count:
-                                self.date_mess_count[int_date] += 1
-                            else:
-                                self.date_mess_count[int_date] = 1
-                        except Exception as e:
-                            print(e)
-                            print('Error while getting date')
 
                         if stop_process == True:
                             #for stopping the thread during processing
@@ -1360,6 +1346,21 @@ class Worker(QRunnable):
                             pass
 
                         else:
+                            try:
+                                self.date_today = message.date
+                                if self.add_time == True:
+                                    self.date_today -= datetime.timedelta(minutes=self.time_difference)
+                                else:
+                                    self.date_today += datetime.timedelta(minutes=self.time_difference)
+
+                                int_date = int(self.date_today.strftime("%Y%m%d"))
+                                if int_date in self.date_mess_count:
+                                    self.date_mess_count[int_date] += 1
+                                else:
+                                    self.date_mess_count[int_date] = 1
+                            except Exception as e:
+                                print(e)
+                                print('Error while getting date')
                             try:
                                 try:
 
