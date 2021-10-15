@@ -3,7 +3,6 @@ import os
 import pyperclip
 import requests
 import webbrowser
-import time
 import datetime
 from threading import Thread
 from PyQt5 import uic

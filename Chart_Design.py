@@ -1,13 +1,7 @@
 from PyQt5.QtWidgets import QWidget
-from PyQt5.QtChart import QChart, QChartView, QLineSeries, QValueAxis, QCategoryAxis
-from PyQt5.QtGui import QPainter, QPen
-from PyQt5.QtCore import Qt
-import sys, os
 from pyqtgraph.Qt import QtGui as graphGui
 from pyqtgraph.Qt import QtCore as graphCore
 import pyqtgraph as pg
-from pyqtgraph import MultiPlotWidget
-from pyqtgraph.metaarray.MetaArray import axis
 class create_chart(QWidget):
     def __init__(self, ui):
         super().__init__()
