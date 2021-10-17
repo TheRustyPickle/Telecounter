@@ -13,12 +13,13 @@ class create_chart(QWidget):
         self.all_data = {}
         self.kpi_data = {}
         self.dates = []
+        self.last_date = ''
         
 
     def remvove_widget(self):
         #remove existing widget so the new one can be placed
         if self.cu_widget != '':
-            self.ui.verticalLayout_3.removeWidget(self.cu_widget)
+            self.ui.verticalLayout_11.removeWidget(self.cu_widget)
         
     def updateViews(self):
         #don't know what it does. taken from pyqtgraph examples
@@ -30,6 +31,8 @@ class create_chart(QWidget):
         self.all_data = data
         self.kpi_data = kpi_data
         self.dates = []
+        self.ui.chart_button_1.setText('All Count')
+        self.ui.chart_button_6.setText('KPI Count')
 
         self.plot = pg.PlotWidget()
         self.plot.showGrid(x=True, y=True)
@@ -87,7 +90,7 @@ class create_chart(QWidget):
         self.plot.plot(axis_x_all, axis_y_all, name="Total Message", pen='b')
         self.plot.plot(axis_x_kpi, axis_y_kpi, name='KPI Message', pen='g')
         self.cu_widget = self.plot
-        self.ui.verticalLayout_3.addWidget(self.plot)
+        self.ui.verticalLayout_11.addWidget(self.plot)
 
     def draw_cursor(self):
         #cross hair
@@ -116,16 +119,18 @@ class create_chart(QWidget):
                     try:
                         mousePoint = int(mousePoint.x())
                         date_time = self.dates[mousePoint]
-                        readable_date = f'{str(date_time)[6:8]}-{str(date_time)[4:6]}-{str(date_time)[:4]}'
-                        full_text = f"<span style=\"color:black;font-size:10pt\">Date: {readable_date}</span><br>"
-                        full_text += f"<span style=\"color:blue;font-size:10pt\">Message Count: {self.all_data[date_time]}</span><br>"
-                        if date_time in self.kpi_data:
-                            full_text += f"<span style=\"color:green;font-size:10pt\">KPI Count: {self.kpi_data[date_time]}</span>"
+                        if self.last_date == date_time:
+                            pass
                         else:
-                            full_text += f"<span style=\"color:green;font-size:10pt\">KPI Count: 0</span>"
-                        #full_text = 
-                        #full_text += f"<span style=\"color:green;font-size:15pt\">All Message Count: {self.all_data[date_time]}</span>"
-                        self.plot.setToolTip(full_text)
+                            readable_date = f'{str(date_time)[6:8]}-{str(date_time)[4:6]}-{str(date_time)[:4]}'
+                            full_text = f"<span style=\"color:black;font-size:10pt\">Date: {readable_date}</span><br>"
+                            full_text += f"<span style=\"color:blue;font-size:10pt\">🟦Message Count: {self.all_data[date_time]}</span><br>"
+                            if date_time in self.kpi_data:
+                                full_text += f"<span style=\"color:green;font-size:10pt\">🟦KPI Count: {self.kpi_data[date_time]}</span>"
+                            else:
+                                full_text += f"<span style=\"color:green;font-size:10pt\">🟦KPI Count: 0</span>"
+                            self.plot.setToolTip(full_text)
+                            self.last_date = date_time
                     except Exception as e:
                         self.plot.setToolTip(full_text)
                         #print(e)
