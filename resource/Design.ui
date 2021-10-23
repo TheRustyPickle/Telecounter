@@ -1322,7 +1322,7 @@ QProgressBar::chunk {
                    </font>
                   </property>
                   <property name="styleSheet">
-                   <string notr="true">QPushButton:hover{
+                   <string notr="true">QPushButton{
 background-color: blue ;
 }
 
@@ -1346,7 +1346,7 @@ border-style: inset;
                    </sizepolicy>
                   </property>
                   <property name="styleSheet">
-                   <string notr="true">QPushButton:hover{
+                   <string notr="true">QPushButton{
 background-color: #C70039 ;
 }
 
@@ -1370,7 +1370,7 @@ border-style: inset;
                    </sizepolicy>
                   </property>
                   <property name="styleSheet">
-                   <string notr="true">QPushButton:hover{
+                   <string notr="true">QPushButton{
 background-color: #C2DD93 ;
 }
 
@@ -1394,7 +1394,7 @@ border-style: inset;
                    </sizepolicy>
                   </property>
                   <property name="styleSheet">
-                   <string notr="true">QPushButton:hover{
+                   <string notr="true">QPushButton{
 background-color: #DEC2B3 ;
 }
 
@@ -1418,7 +1418,7 @@ border-style: inset;
                    </sizepolicy>
                   </property>
                   <property name="styleSheet">
-                   <string notr="true">QPushButton:hover{
+                   <string notr="true">QPushButton{
 background-color: #9A65FF ;
 }
 
@@ -1459,7 +1459,13 @@ border-style: inset;
                    </sizepolicy>
                   </property>
                   <property name="styleSheet">
-                   <string notr="true"/>
+                   <string notr="true">QPushButton{
+background-color: #48E48F ;
+}
+QPushButton:pressed{
+background-color: #8BFFB4;
+border-style: inset;
+}</string>
                   </property>
                   <property name="text">
                    <string>Empty</string>
@@ -1475,7 +1481,7 @@ border-style: inset;
                    </sizepolicy>
                   </property>
                   <property name="styleSheet">
-                   <string notr="true">QPushButton:hover{
+                   <string notr="true">QPushButton{
 background-color: #FFC300 ;
 }
 
@@ -1505,7 +1511,7 @@ border-style: inset;
                    </size>
                   </property>
                   <property name="styleSheet">
-                   <string notr="true">QPushButton:hover{
+                   <string notr="true">QPushButton{
 background-color: #939DDD ;
 }
 
@@ -1529,7 +1535,7 @@ border-style: inset;
                    </sizepolicy>
                   </property>
                   <property name="styleSheet">
-                   <string notr="true">QPushButton:hover{
+                   <string notr="true">QPushButton{
 background-color: #3BE4CA ;
 }
 
@@ -1553,7 +1559,7 @@ border-style: inset;
                    </sizepolicy>
                   </property>
                   <property name="styleSheet">
-                   <string notr="true">QPushButton:hover{
+                   <string notr="true">QPushButton{
 background-color: #EEFF0B ;
 }
 
@@ -1611,7 +1617,7 @@ border-style: inset;
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboBox_2">
+               <widget class="QComboBox" name="add_user_box">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                   <horstretch>0</horstretch>
@@ -1641,7 +1647,7 @@ border-style: inset;
                </widget>
               </item>
               <item>
-               <widget class="QComboBox" name="comboBox">
+               <widget class="QComboBox" name="chart_type">
                 <property name="sizePolicy">
                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
                   <horstretch>0</horstretch>
