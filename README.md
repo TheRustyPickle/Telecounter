@@ -4,6 +4,7 @@ A GUI created with PyQt5 for counting messages in Telegram Groups from users wit
 <h4> How to run</h4>
 
 Download the executable from latest Release for one click runnable file or download source from Release and run Telecounter.py with the required library
+Do not clone the current repo, it might be unstable
 
 GUI Design tested only on Windows 10 and Arch Linux.
 
