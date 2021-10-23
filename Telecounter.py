@@ -143,9 +143,15 @@ class main_form(QMainWindow):
         self.cu_kpi_mess = {}
         self.date_counts = {}
         self.date_counts_kpi = {}
+        self.date_hour_counts = {}
+        self.date_hour_counts_kpi = {}
+        self.user_date_counts = {}
+        self.user_date_hour_counts = {}
+        self.added_in_chart = {}
         
         self.incomplete_sess = []
         self.session_list = []
+        self.empty_buttons = []
 
         self.button_calender_1 = QPushButton(self.ui.box_starting_mess)
         self.button_calender_3 = QPushButton(self.ui.box_ending_date)
@@ -202,6 +208,17 @@ class main_form(QMainWindow):
         self.ui.table_widget_1.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.ui.listWidget.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.ui.listWidget.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
+        self.ui.chart_type.currentIndexChanged.connect(self.chart_type_changed)
+        self.ui.chart_button_1.clicked.connect(lambda state, x=self.ui.chart_button_1: self.deleting_chart_value(x))
+        self.ui.chart_button_2.clicked.connect(lambda state, x=self.ui.chart_button_2: self.deleting_chart_value(x))
+        self.ui.chart_button_3.clicked.connect(lambda state, x=self.ui.chart_button_3: self.deleting_chart_value(x))
+        self.ui.chart_button_4.clicked.connect(lambda state, x=self.ui.chart_button_4: self.deleting_chart_value(x))
+        self.ui.chart_button_5.clicked.connect(lambda state, x=self.ui.chart_button_5: self.deleting_chart_value(x))
+        self.ui.chart_button_6.clicked.connect(lambda state, x=self.ui.chart_button_6: self.deleting_chart_value(x))
+        self.ui.chart_button_7.clicked.connect(lambda state, x=self.ui.chart_button_7: self.deleting_chart_value(x))
+        self.ui.chart_button_8.clicked.connect(lambda state, x=self.ui.chart_button_8: self.deleting_chart_value(x))
+        self.ui.chart_button_9.clicked.connect(lambda state, x=self.ui.chart_button_9: self.deleting_chart_value(x))
+        self.ui.chart_button_10.clicked.connect(lambda state, x=self.ui.chart_button_10: self.deleting_chart_value(x))
         
 
     def modifier(self):  # modify widgets, button before the window loads
@@ -380,6 +397,24 @@ class main_form(QMainWindow):
     
     def sorting_event_2(self):  #triggered when clicking on table column buttons for sorting
         self.ui.table_widget_2.clearSelection()
+
+    def deleting_chart_value(self, button_name):
+        if button_name in self.added_in_chart:
+            del self.added_in_chart[button_name]
+            self.empty_buttons.append(button_name)
+            button_name.setText('Empty')
+
+    def chart_type_changed(self, event):
+        #sends event here when the combo box for changing chart type
+        #current selected value changes
+
+        if event == 1:
+            self.log_chart.remvove_widget()
+            self.log_chart.create_chart(self.date_hour_counts, self.date_hour_counts_kpi, True)
+
+        elif event == 0:
+            self.log_chart.remvove_widget()
+            self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, False)
 
     def cell_copier(self):  #copies cells selected in the table widget
         self.all_cell_selected = {}
@@ -670,9 +705,9 @@ class main_form(QMainWindow):
         self.cu_timezone()
 
         if self.add_time == True:
-            self.starting_date -= datetime.timedelta(minutes=self.time_difference)
-        else:
             self.starting_date += datetime.timedelta(minutes=self.time_difference)
+        else:
+            self.starting_date -= datetime.timedelta(minutes=self.time_difference)
 
         self.group_name = self.ui.box_ending_mess.text()
         self.cu_session = self.ui.combobox_session.currentText()
@@ -695,9 +730,9 @@ class main_form(QMainWindow):
         self.ending_date += datetime.timedelta(days=1)
 
         if self.add_time == True:
-            self.ending_date -= datetime.timedelta(minutes=self.time_difference)
-        else:
             self.ending_date += datetime.timedelta(minutes=self.time_difference)
+        else:
+            self.ending_date -= datetime.timedelta(minutes=self.time_difference)
         
         if '/c/' in self.group_name:
             self.ui.statusBar().showMessage(f'Private Group Detected')
@@ -746,6 +781,13 @@ class main_form(QMainWindow):
 
     def date_messages(self, data):
         #date count history to pass to the designer
+        #0 = All Message Day Based Data Format: {date:amount}
+        #1 = KPI Message Day Based Data Format: {date:amount}
+        #2 = All Message Hour Based Data Format: {hour:amount}
+        #3 = KPI Message Hour Based Data Format: {hour:amount}
+        #4 = User Message Day Based Data Format: {date:{user:amount}}
+        #5 = User Message Hour Based Data Format {hour:{user:amount}}
+
         for i in data[0]:
             if i in self.date_counts:
                 self.date_counts[i] += data[0][i]
@@ -757,6 +799,40 @@ class main_form(QMainWindow):
                 self.date_counts_kpi[i] += data[1][i]
             else:
                 self.date_counts_kpi[i] = data[1][i]
+
+        for i in data[2]:
+            if i in self.date_hour_counts:
+                self.date_hour_counts[i] += data[2][i]
+            else:
+                self.date_hour_counts[i] = data[2][i]
+
+        for i in data[3]:
+            if i in self.date_hour_counts_kpi:
+                self.date_hour_counts_kpi[i] += data[3][i]
+            else:
+                self.date_hour_counts_kpi[i] = data[3][i]
+
+        for i in data[4]:
+            if i in self.user_date_counts:
+                pass
+            else:
+                self.user_date_counts[i] = {}
+            for u in data[4][i]:
+                if u in self.user_date_counts[i]:
+                    self.user_date_counts[i][u] += data[4][i][u]
+                else:
+                    self.user_date_counts[i][u] = data[4][i][u]
+
+        for i in data[5]:
+            if i in self.user_date_hour_counts:
+                pass
+            else:
+                self.user_date_hour_counts[i] = {}
+            for u in data[5][i]:
+                if u in self.user_date_hour_counts[i]:
+                    self.user_date_hour_counts[i][u] += data[5][i][u]
+                else:
+                    self.user_date_hour_counts[i][u] = data[5][i][u]
 
     def disable_widgets(self):
         # disables widgets. used for if during multi
@@ -771,6 +847,9 @@ class main_form(QMainWindow):
         self.ui.button_save.setEnabled(False)
         self.ui.button_remove.setEnabled(False)
         self.ui.button_add_user.setEnabled(False)
+        self.ui.chart_type.setCurrentIndex(0)
+        self.ui.chart_type.setEnabled(False)
+        self.ui.add_user_box.setEnabled(False)
         self.running = True
         self.counting = True
         self.finishing_log = False
@@ -787,6 +866,8 @@ class main_form(QMainWindow):
             self.ui.button_save.setEnabled(True)
             self.ui.button_remove.setEnabled(True)
             self.ui.button_add_user.setEnabled(True)
+        self.ui.chart_type.setEnabled(True)
+        self.ui.add_user_box.setEnabled(True)
         self.group_name = ''
         self.group_name_2 = ''
         self.group_starting = 0
@@ -903,8 +984,18 @@ class main_form(QMainWindow):
         else:
             self.enable_widgets()
             self.row_timer.stop()
-            self.log_chart.remvove_widget()
-            self.log_chart.create_chart(self.date_counts, self.date_counts_kpi)
+            try:
+                self.log_chart.remvove_widget()
+                self.log_chart.create_chart(self.date_counts, self.date_counts_kpi)
+                self.ui.chart_button_1.setText('All Count')
+                self.ui.chart_button_6.setText('KPI Count')
+                self.added_in_chart[self.ui.chart_button_1] = 'All Count'
+                self.added_in_chart[self.ui.chart_button_6] = 'KPI Count'
+                self.empty_buttons.remove(self.ui.chart_button_1)
+                self.empty_buttons.remove(self.ui.chart_button_6)
+            except:
+                pass
+
             for i in self.all_log_row:
                 name = QtWidgets.QTableWidgetItem(str(self.all_log_row[i][0]))
                 username = QtWidgets.QTableWidgetItem(str(self.all_log_row[i][1]))
@@ -1054,9 +1145,11 @@ class main_form(QMainWindow):
         self.session_detector()
         self.disable_widgets()
         self.label_changer(0, 0)
-
         self.ui.total_2.setText(f'Total Message: 0')
         self.ui.total_1.setText(f'Total KPI: 0')
+        self.empty_buttons = [self.ui.chart_button_1, self.ui.chart_button_2, self.ui.chart_button_3,
+                self.ui.chart_button_4, self.ui.chart_button_5, self.ui.chart_button_6, self.ui.chart_button_7,
+                self.ui.chart_button_8, self.ui.chart_button_9, self.ui.chart_button_10]
 
         while self.ui.table_widget_1.rowCount() > 0:
             self.ui.table_widget_1.removeRow(0)
@@ -1305,11 +1398,15 @@ class Worker(QRunnable):
         self.max_bar = max_bar
         self.date_mess_count = {}
         self.kpi_mess_count = {}
+        self.date_hour_mess_count = {}
+        self.kpi_hour_mess_count = {}
+        self.user_date_mess_count = {}
+        self.user_date_hour_mess_count = {}
         self.add_time = add_time
         self.time_difference = time_difference
         self.date_today = ''
         self.signal = worker_signals()
-        print(self.group_name, self.group_starting, self.group_ending, self.thread_num)
+        print(self.group_name, self.group_starting, self.group_ending, self.thread_num, self.add_time, self.time_difference)
 
     @pyqtSlot()
     def run(self):
@@ -1328,7 +1425,6 @@ class Worker(QRunnable):
                     #start iterating from the selected message links
                     async for message in client.iter_messages(self.group_name,
                                         offset_id=self.group_ending):
-
                         if stop_process == True:
                             #for stopping the thread during processing
                             return
@@ -1348,15 +1444,48 @@ class Worker(QRunnable):
                             try:
                                 self.date_today = message.date
                                 if self.add_time == True:
-                                    self.date_today -= datetime.timedelta(minutes=self.time_difference)
-                                else:
                                     self.date_today += datetime.timedelta(minutes=self.time_difference)
+                                else:
+                                    self.date_today -= datetime.timedelta(minutes=self.time_difference)
 
                                 int_date = int(self.date_today.strftime("%Y%m%d"))
+                                int_hour_date = int(self.date_today.strftime("%Y%m%d%H"))
+
                                 if int_date in self.date_mess_count:
                                     self.date_mess_count[int_date] += 1
                                 else:
                                     self.date_mess_count[int_date] = 1
+
+                                if int_hour_date in self.date_hour_mess_count:
+                                    self.date_hour_mess_count[int_hour_date] += 1
+                                else:
+                                    self.date_hour_mess_count[int_hour_date] = 1
+
+                                try:
+                                    mess_sender = message.from_id.user_id
+
+                                    if int_date in self.user_date_mess_count and mess_sender in self.user_date_mess_count[int_date]:
+                                        self.user_date_mess_count[int_date][mess_sender] = self.user_date_mess_count[int_date][mess_sender] + 1
+
+                                    elif int_date in self.user_date_mess_count and mess_sender not in self.user_date_mess_count[int_date]:
+                                        self.user_date_mess_count[int_date][mess_sender] = 1
+                                    
+                                    elif int_date not in self.user_date_mess_count:
+                                        self.user_date_mess_count[int_date] = {}
+                                        self.user_date_mess_count[int_date][mess_sender] = 1
+
+                                    if int_hour_date in self.user_date_hour_mess_count and mess_sender in self.user_date_hour_mess_count[int_hour_date]:
+                                        self.user_date_hour_mess_count[int_hour_date][mess_sender] = self.user_date_hour_mess_count[int_hour_date][mess_sender] + 1
+
+                                    elif int_hour_date in self.user_date_hour_mess_count and mess_sender not in self.user_date_hour_mess_count[int_hour_date]:
+                                        self.user_date_hour_mess_count[int_hour_date][mess_sender] = 1
+                                    
+                                    elif int_hour_date not in self.user_date_hour_mess_count:
+                                        self.user_date_hour_mess_count[int_hour_date] = {}
+                                        self.user_date_hour_mess_count[int_hour_date][mess_sender] = 1
+                                except Exception as e:
+                                    print(e)
+
                             except Exception as e:
                                 print(e)
                                 print('Error while getting date')
@@ -1401,6 +1530,12 @@ class Worker(QRunnable):
                                                     self.kpi_mess_count[int_date] += 1
                                                 else:
                                                     self.kpi_mess_count[int_date] = 1
+
+                                                int_hour_date = int(self.date_today.strftime("%Y%m%d%H"))
+                                                if int_hour_date in self.kpi_hour_mess_count:
+                                                    self.kpi_hour_mess_count[int_hour_date] += 1
+                                                else:
+                                                    self.kpi_hour_mess_count[int_hour_date] = 1
 
                                         except Exception as e:
                                             print('Error while adding KPI Date')
@@ -1459,7 +1594,7 @@ class Worker(QRunnable):
                     self.signal.progress.emit(
                         [self.bar, self.total_mess, self.counter, self.thread_num])
 
-                    self.signal.date_counts.emit([self.date_mess_count, self.kpi_mess_count])
+                    self.signal.date_counts.emit([self.date_mess_count, self.kpi_mess_count, self.date_hour_mess_count, self.kpi_hour_mess_count, self.user_date_mess_count, self.user_date_hour_mess_count])
 
                     total_all = 0
                     total_kpi = 0
