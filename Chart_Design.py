@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QWidget
 from pyqtgraph.Qt import QtGui as graphGui
 from pyqtgraph.Qt import QtCore as graphCore
 import pyqtgraph as pg
+import datetime
 class create_chart(QWidget):
     def __init__(self, ui):
         super().__init__()
@@ -14,6 +15,7 @@ class create_chart(QWidget):
         self.kpi_data = {}
         self.dates = []
         self.last_date = ''
+        self.hourly_selected = False
         
 
     def remvove_widget(self):
@@ -26,13 +28,26 @@ class create_chart(QWidget):
         self.p2.setGeometry(self.p1.vb.sceneBoundingRect())
         self.p2.linkedViewChanged(self.p1.vb, self.p2.XAxis)
 
-    def create_chart(self, data, kpi_data):
+    def create_chart(self, data, kpi_data, hourly=False):
+        self.hourly_selected = hourly
+        data = dict(sorted(data.items()))
+        if hourly ==False:
+            first_key = list(data.keys())[0]
+            last_key = list(data.keys())[-1]
+            first_date = datetime.datetime(int(str(first_key)[:4]), int(str(first_key)[4:6]), int(str(first_key)[6:8]))
+            last_date = datetime.datetime(int(str(last_key)[:4]), int(str(last_key)[4:6]), int(str(last_key)[6:8]))
+
+            while first_date <= last_date:
+                first_date += datetime.timedelta(days=1)
+                int_first_date = int(first_date.strftime("%Y%m%d"))
+
+                if int_first_date not in data:
+                    data[int_first_date] = 0
+        
         data = dict(sorted(data.items()))
         self.all_data = data
         self.kpi_data = kpi_data
         self.dates = []
-        self.ui.chart_button_1.setText('All Count')
-        self.ui.chart_button_6.setText('KPI Count')
 
         self.plot = pg.PlotWidget()
         self.plot.showGrid(x=True, y=True)
@@ -53,6 +68,7 @@ class create_chart(QWidget):
         axis_x_kpi = []
         axis_y_kpi = []
         x_labels = [[]]
+        x_top_labels = [[]]
         num = 0
         cu_next = 0
         next_x_label = 0
@@ -68,8 +84,13 @@ class create_chart(QWidget):
             if cu_next != 0:
                 cu_next -= 1
             else:
-                new_lab = f'{str(i)[6:8]}-{str(i)[4:6]}' 
+                new_lab = f'{str(i)[6:8]}-{str(i)[4:6]}'
                 x_labels[0].append((num, new_lab))
+                if hourly == False:
+                    x_top_labels[0].append((num, new_lab))
+                else:
+                    hour_time = f'{str(i)[8:10]}:00'
+                    x_top_labels[0].append((num, hour_time))
                 cu_next = next_x_label
 
             if i in kpi_data:
@@ -86,7 +107,7 @@ class create_chart(QWidget):
         pg.setConfigOptions(antialias=True)
         self.plot.addLegend()
         xax.setTicks(x_labels)
-        xax_2.setTicks(x_labels)
+        xax_2.setTicks(x_top_labels)
         self.plot.plot(axis_x_all, axis_y_all, name="Total Message", pen='b')
         self.plot.plot(axis_x_kpi, axis_y_kpi, name='KPI Message', pen='g')
         self.cu_widget = self.plot
@@ -124,6 +145,9 @@ class create_chart(QWidget):
                         else:
                             readable_date = f'{str(date_time)[6:8]}-{str(date_time)[4:6]}-{str(date_time)[:4]}'
                             full_text = f"<span style=\"color:black;font-size:10pt\">Date: {readable_date}</span><br>"
+                            if self.hourly_selected == True:
+                                readable_time = f'{str(date_time)[8:10]}:00:00'
+                                full_text += f"<span style=\"color:black;font-size:10pt\">Time: {readable_time}</span><br>"
                             full_text += f"<span style=\"color:blue;font-size:10pt\">🟦Message Count: {self.all_data[date_time]}</span><br>"
                             if date_time in self.kpi_data:
                                 full_text += f"<span style=\"color:green;font-size:10pt\">🟦KPI Count: {self.kpi_data[date_time]}</span>"
