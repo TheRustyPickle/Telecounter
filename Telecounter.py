@@ -23,10 +23,11 @@ from Chart_Design import *
 #[x]switch to pyqtgraph
 #[x]add a crosshair
 #[x]show value of x and y on hover
-#[ ]ability to show both hourly and day based chart
+#[x]ability to show both hourly and day based chart
 #[ ]allow user_id/username to be added separately to the chart
 #[x]change legend names
-#[ ]if hourly chart selected, show hours on top of the chart
+#[x]if hourly chart selected, show hours on top of the chart
+#[ ]save checked users entities in a pickle file
 
 version = 'v2.1'
 new_version = ''
@@ -49,13 +50,25 @@ api_hash = 'test'
 if os.path.exists('resource/kpi_id.pckl'):
     pass
 else:
-    data_store = open('kpi_id.pckl', 'wb')
+    data_store = open('resource/kpi_id.pckl', 'wb')
+    pickle.dump({}, data_store)
+    data_store.close()
+
+if os.path.exists('resource/checked_entities.pckl'):
+    pass
+else:
+    data_store = open('resource/checked_entities.pckl', 'wb')
     pickle.dump({}, data_store)
     data_store.close()
 
 data_store = open('resource/kpi_id.pckl', 'rb')  # retrieve saved kpi id
 accounts = pickle.load(data_store)
 data_store.close()
+
+data_store = open('resource/checked_entities.pckl', 'rb')  # retrieve saved kpi id
+checked_entities = pickle.load(data_store)
+data_store.close()
+
 
 
 class version_form(QWidget):
@@ -152,6 +165,7 @@ class main_form(QMainWindow):
         self.incomplete_sess = []
         self.session_list = []
         self.empty_buttons = []
+        self.added_users = []
 
         self.button_calender_1 = QPushButton(self.ui.box_starting_mess)
         self.button_calender_3 = QPushButton(self.ui.box_ending_date)
@@ -417,10 +431,16 @@ class main_form(QMainWindow):
             self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, False)
 
     def cell_copier(self):  #copies cells selected in the table widget
-        self.all_cell_selected = {}
+        self.all_cell_selected = {} 
         self.kpi_cell_selected = {}
         self.largest_text_all = {}
         self.largest_text_kpi = {}
+
+        #format {row{column:value}}
+        #keeping track of row and column so they can be sorted numerically
+        #sorting is necessary because if random selectedItems in sorted format rather
+        #by the order they were selected. Sort happens by row => column order
+
         full_text = ''
         current_tab = self.ui.tabWidget.currentIndex() 
         current_focus = QtWidgets.QApplication.focusWidget().objectName()
@@ -430,6 +450,7 @@ class main_form(QMainWindow):
                 row_num = i.row()
                 col_num = i.column()
                 cell_text = i.text()
+
                 if row_num not in self.all_cell_selected:
                     self.all_cell_selected[row_num] = {}
                 self.all_cell_selected[row_num][col_num] = cell_text
@@ -645,7 +666,7 @@ class main_form(QMainWindow):
                 self.pri_group = True
 
             ending_data = self.ui.box_ending_mess.text()
-            ending_data = "".join(ending_data.split())
+            ending_data = "".join(ending_data.split())  #to prevent any spacing mistake
             self.cu_session = self.ui.combobox_session.currentText()
             try:
                 if starting_data == '':
@@ -703,6 +724,8 @@ class main_form(QMainWindow):
         self.ending_date = self.ui.box_ending_date.text().split('-')
 
         self.cu_timezone()
+
+        #add or take time to match the user's Telegram app
 
         if self.add_time == True:
             self.starting_date += datetime.timedelta(minutes=self.time_difference)
@@ -888,10 +911,13 @@ class main_form(QMainWindow):
         if self.ui.Button_count.isEnabled() == True:
             if self.running == True or self.finishing_log == True:
                 self.disable_widgets()
+
         if self.cu_dots == '....':
             self.cu_dots = ''
+
         if self.counting_time == 0:
             self.cu_dots += '.'
+
             if self.counting == True and self.finishing_log == True:
                 self.ui.statusBar().showMessage(f'Counting and Finishing Log{self.cu_dots}')
 
@@ -912,7 +938,11 @@ class main_form(QMainWindow):
         print(
             f'Bar Value: {list_data[0]}, Total Message: {list_data[1]}, Counter: {list_data[2]}')
         self.progress_bar(int(list_data[0]))
-        if int(list_data[1]) <= -1:
+
+        #the value goes negative when there is a lack of messages/counting
+        #so make it zero 
+
+        if int(list_data[1]) <= -1: 
             self.label_changer(0, 0)
         else:
             self.label_changer(int(list_data[1]), int(list_data[2]))
@@ -940,6 +970,9 @@ class main_form(QMainWindow):
         if bar_value > 100:
             bar_value = 100
 
+        #the value goes negative when there is a lack of messages/counting
+        #so make it zero 
+        
         for i in self.cu_total_mess:
             if self.cu_total_mess[i] <= -1:
                 pass
@@ -1099,6 +1132,7 @@ class main_form(QMainWindow):
         except:
             average_char = 0
             self.all_log_row[data[4]].append(average_char)
+
         self.ui.table_widget_1.setRowCount(self.all_latest_row_num)
 
     def set_row_data_kpi(self, data):
@@ -1137,6 +1171,17 @@ class main_form(QMainWindow):
         self.group_starting = id_nums[0]
         self.group_ending = id_nums[1]
 
+    def counted_users(self, users):
+        #adds to the combobox in the chart tab
+        for user in users:
+            if user in self.added_users:
+                pass
+            else:
+                self.added_users.append(str(users[user]))
+
+        self.added_users.sort()    
+        self.ui.add_user_box.addItems(self.added_users)
+
     def client_starter(self):
         #reset variables, table rows, labels
         #detects multi session or single session
@@ -1168,6 +1213,9 @@ class main_form(QMainWindow):
         self.finishing_data = {}
         self.date_counts = {}
         self.date_counts_kpi = {}
+
+        #verify the session selected/available ones and start the
+        #main function which starts up the thread
 
         if self.multi_sess_selected == True:
             pool = QThreadPool.globalInstance()
@@ -1254,9 +1302,10 @@ class main_form(QMainWindow):
         for i in range(threadCount):
             self.worker = Worker(self.group_name, self.group_starting,
                              self.mess_id_latest,
-                             self.cu_session, self.create_log, 1, 1, 
-                             mess_value=message_value, multi_sess=False, 
-                             max_bar=100, add_time=self.add_time, time_difference=self.time_difference)
+                             self.cu_session, self.create_log, 1, 1,
+                             checked_entities, mess_value=message_value,
+                             multi_sess=False, max_bar=100, add_time=self.add_time,
+                             time_difference=self.time_difference)
             self.worker.signal.progress.connect(self.data_distributor)
             self.worker.signal.list_size.connect(self.row_amount)
             self.worker.signal.row_data.connect(self.set_row_data)
@@ -1264,6 +1313,7 @@ class main_form(QMainWindow):
             self.worker.signal.mess_char.connect(self.total_mess_saver)
             self.worker.signal.finished.connect(self.finishing)
             self.worker.signal.date_counts.connect(self.date_messages)
+            self.worker.signal.counted_users.connect(self.counted_users)
             pool.start(self.worker)
             break
     
@@ -1315,8 +1365,18 @@ class main_form(QMainWindow):
         parts_start = {}
         parts_end = {}
 
-        for i in range(len(available_sess)-1, -1, -1):
-            if i == len(available_sess)-1:
+        if int(threadCount) > len(available_sess):
+            total_max_thread = len(available_sess)
+        else:
+            total_max_thread = int(threadCount)
+        
+        #this part is important that depends which thread will run
+        #from which message and stop where. If I have 4 sessions and
+        #message starts from 0 to 100 message ID it will go like this
+        #Sess 1 = 0-25, Sess 2 = 25-50 Sess 2 = 50-75 Sess 2 = 75-100
+
+        for i in range(total_max_thread, -1, -1, -1):
+            if i == total_max_thread -1:
                 parts_start[available_sess[i]] = new_starting
                 parts_end[available_sess[i]] = new_starting + part_value
                 new_starting += part_value
@@ -1331,17 +1391,22 @@ class main_form(QMainWindow):
         
         message_value = 100 / (self.mess_id_latest - self.group_starting)
         final_part_value = 100
+        #if there is a odd nunber of sessions the dividing  thread value can have
+        #float value. So give each session an integer value and lastly
+        #give the final session whatever value is left
+
         for i in available_sess:
             thread_num += 1
-            part_bar = int(100/len(available_sess))
+            part_bar = int(100/total_max_thread)
             if i == available_sess[-1]:
                 part_bar = final_part_value
             self.worker = Worker(self.group_name, parts_start[i],
                              parts_end[i],
                              i, self.create_log, thread_num, 
-                             len(available_sess), mess_value=message_value, 
-                             multi_sess=True, max_bar=part_bar,
-                             add_time=self.add_time, time_difference=self.time_difference)
+                             total_max_thread, checked_entities,
+                             mess_value=message_value, multi_sess=True,
+                             max_bar=part_bar, add_time=self.add_time,
+                             time_difference=self.time_difference)
 
             final_part_value -= part_bar
             self.worker.signal.progress.connect(self.data_distributor_multi)
@@ -1351,6 +1416,7 @@ class main_form(QMainWindow):
             self.worker.signal.mess_char.connect(self.total_mess_saver)
             self.worker.signal.finished.connect(self.finishing)
             self.worker.signal.date_counts.connect(self.date_messages)
+            self.worker.signal.counted_users.connect(self.counted_users)
             pool.start(self.worker)
             if thread_num >= int(threadCount):
                 break
@@ -1369,11 +1435,13 @@ class worker_signals(QObject):
     incomplete_sess = pyqtSignal(str)
     date_mess_ids = pyqtSignal(list)
     date_counts = pyqtSignal(list)
+    counted_users = pyqtSignal(dict)
+
 
 class Worker(QRunnable):
     def __init__(self, group_name, group_starting,
                  group_ending, session_name, create_log, 
-                 thread_num, total_thread, mess_value=0, 
+                 thread_num, total_thread, checked_entities, mess_value=0, 
                  multi_sess=False, max_bar=0, add_time=False,
                  time_difference=0):
         super().__init__()
@@ -1383,27 +1451,32 @@ class Worker(QRunnable):
         self.group_ending = group_ending
         self.group_name = group_name
         self.group_starting = group_starting
-        self.total_mess = 0
-        self.counter = 0
         self.mess_value = mess_value
-        self.bar = 0
-        self.pending_message = 0
-        self.message_data = {}
-        self.row_number_all = 0
-        self.row_number_kpi = 0
         self.create_log = create_log
         self.thread_num = thread_num
         self.total_thread = total_thread
         self.multi_sess = multi_sess
         self.max_bar = max_bar
+        self.add_time = add_time
+        self.time_difference = time_difference
+        self.checked_entities = checked_entities
+
+        self.total_mess = 0
+        self.counter = 0
+        self.bar = 0
+        self.pending_message = 0
+        self.row_number_all = 0
+        self.row_number_kpi = 0
+
+        self.message_data = {}
         self.date_mess_count = {}
         self.kpi_mess_count = {}
         self.date_hour_mess_count = {}
         self.kpi_hour_mess_count = {}
         self.user_date_mess_count = {}
         self.user_date_hour_mess_count = {}
-        self.add_time = add_time
-        self.time_difference = time_difference
+        self.all_checked_users = {}
+        
         self.date_today = ''
         self.signal = worker_signals()
         print(self.group_name, self.group_starting, self.group_ending, self.thread_num, self.add_time, self.time_difference)
@@ -1442,6 +1515,9 @@ class Worker(QRunnable):
 
                         else:
                             try:
+                                #get the date in both daily and hourly in int form
+                                #add or take time based on timezone and count the message
+                                #amount for each. 
                                 self.date_today = message.date
                                 if self.add_time == True:
                                     self.date_today += datetime.timedelta(minutes=self.time_difference)
@@ -1462,8 +1538,38 @@ class Worker(QRunnable):
                                     self.date_hour_mess_count[int_hour_date] = 1
 
                                 try:
+                                    #another try in case there is no message sender
+
                                     mess_sender = message.from_id.user_id
 
+                                    try:
+                                        if mess_sender in self.all_checked_users:
+                                            pass
+                                        else:
+                                            if mess_sender in checked_entities:
+                                                pass
+                                                #TODO get data from the entity dict
+                                            else:
+                                                #TODO add data to checked_entitity
+                                                user_entity = await client.get_entity(mess_sender)
+                                                username = user_entity.username
+                                                first_name = user_entity.first_name
+                                                last_name = user_entity.last_name
+                                                full_name = f'{first_name}'
+                                                if last_name is not None:
+                                                    full_name += f' {last_name}'
+
+                                                if username is not None:
+                                                    self.all_checked_users[mess_sender] = username
+                                                
+                                                elif first_name is not None:
+                                                    self.all_checked_users[mess_sender] = full_name
+                                                
+                                                else:
+                                                    self.all_checked_users[mess_sender] = mess_sender
+                                    except:
+                                        pass
+                                            
                                     if int_date in self.user_date_mess_count and mess_sender in self.user_date_mess_count[int_date]:
                                         self.user_date_mess_count[int_date][mess_sender] = self.user_date_mess_count[int_date][mess_sender] + 1
 
@@ -1500,6 +1606,8 @@ class Worker(QRunnable):
                                         self.message_data[mess_sender] = 1
 
                                     if int(message.id) == self.group_starting: 
+                                        #group_start is the stopping point for this run
+                                        #add the count to the variables and break the loop
                                         
                                         if self.pending > self.max_bar:
                                             pass
@@ -1520,6 +1628,10 @@ class Worker(QRunnable):
                                         self.total_mess += self.last_id - message.id
                                         self.last_id = message.id
                                         self.pending_message += 1
+
+                                        #pending controls the bar value. So after each message add the 
+                                        #message value * how many many messages. Message passed calculated
+                                        #by the last message id that was counted - current id 
 
                                         try:
                                             if message.from_id.user_id in accounts:
@@ -1583,6 +1695,10 @@ class Worker(QRunnable):
                                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                                 #print(exc_type, fname, exc_tb.tb_lineno, e)
 
+
+                    #in case the bar value does not fill up where it is supposed to
+                    #fill it up manually
+
                     if self.bar > self.max_bar:
                         pass
                     elif self.bar != self.max_bar and self.multi_sess == False:
@@ -1595,7 +1711,7 @@ class Worker(QRunnable):
                         [self.bar, self.total_mess, self.counter, self.thread_num])
 
                     self.signal.date_counts.emit([self.date_mess_count, self.kpi_mess_count, self.date_hour_mess_count, self.kpi_hour_mess_count, self.user_date_mess_count, self.user_date_hour_mess_count])
-
+                    self.signal.counted_users.emit(self.all_checked_users)
                     total_all = 0
                     total_kpi = 0
                     self.message_data = dict(
@@ -1642,6 +1758,7 @@ class Worker(QRunnable):
                                 #print(exc_type, fname, exc_tb.tb_lineno, e)
 
                     self.signal.finished.emit([total_all, total_kpi, self.thread_num])
+                    #TODO emit checked entity for updating and saving to pickle
                     await client.disconnect()
                     try:
                         await client.disconnected
