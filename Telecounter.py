@@ -27,7 +27,6 @@ from Chart_Design import *
 #[ ]allow user_id/username to be added separately to the chart
 #[x]change legend names
 #[x]if hourly chart selected, show hours on top of the chart
-#[ ]save checked users entities in a pickle file
 
 version = 'v2.1'
 new_version = ''
@@ -54,19 +53,8 @@ else:
     pickle.dump({}, data_store)
     data_store.close()
 
-if os.path.exists('resource/checked_entities.pckl'):
-    pass
-else:
-    data_store = open('resource/checked_entities.pckl', 'wb')
-    pickle.dump({}, data_store)
-    data_store.close()
-
 data_store = open('resource/kpi_id.pckl', 'rb')  # retrieve saved kpi id
 accounts = pickle.load(data_store)
-data_store.close()
-
-data_store = open('resource/checked_entities.pckl', 'rb')  # retrieve saved kpi id
-checked_entities = pickle.load(data_store)
 data_store.close()
 
 
@@ -1173,11 +1161,12 @@ class main_form(QMainWindow):
 
     def counted_users(self, users):
         #adds to the combobox in the chart tab
+        self.ui.add_user_box.clear()
         for user in users:
             if user in self.added_users:
                 pass
             else:
-                self.added_users.append(str(users[user]))
+                self.added_users.append(f'{users[user]}')
 
         self.added_users.sort()    
         self.ui.add_user_box.addItems(self.added_users)
@@ -1303,8 +1292,8 @@ class main_form(QMainWindow):
             self.worker = Worker(self.group_name, self.group_starting,
                              self.mess_id_latest,
                              self.cu_session, self.create_log, 1, 1,
-                             checked_entities, mess_value=message_value,
-                             multi_sess=False, max_bar=100, add_time=self.add_time,
+                             mess_value=message_value, multi_sess=False,
+                             max_bar=100, add_time=self.add_time,
                              time_difference=self.time_difference)
             self.worker.signal.progress.connect(self.data_distributor)
             self.worker.signal.list_size.connect(self.row_amount)
@@ -1403,9 +1392,9 @@ class main_form(QMainWindow):
             self.worker = Worker(self.group_name, parts_start[i],
                              parts_end[i],
                              i, self.create_log, thread_num, 
-                             total_max_thread, checked_entities,
-                             mess_value=message_value, multi_sess=True,
-                             max_bar=part_bar, add_time=self.add_time,
+                             total_max_thread, mess_value=message_value,
+                             multi_sess=True, max_bar=part_bar,
+                             add_time=self.add_time,
                              time_difference=self.time_difference)
 
             final_part_value -= part_bar
@@ -1441,7 +1430,7 @@ class worker_signals(QObject):
 class Worker(QRunnable):
     def __init__(self, group_name, group_starting,
                  group_ending, session_name, create_log, 
-                 thread_num, total_thread, checked_entities, mess_value=0, 
+                 thread_num, total_thread, mess_value=0, 
                  multi_sess=False, max_bar=0, add_time=False,
                  time_difference=0):
         super().__init__()
@@ -1459,7 +1448,6 @@ class Worker(QRunnable):
         self.max_bar = max_bar
         self.add_time = add_time
         self.time_difference = time_difference
-        self.checked_entities = checked_entities
 
         self.total_mess = 0
         self.counter = 0
@@ -1541,34 +1529,6 @@ class Worker(QRunnable):
                                     #another try in case there is no message sender
 
                                     mess_sender = message.from_id.user_id
-
-                                    try:
-                                        if mess_sender in self.all_checked_users:
-                                            pass
-                                        else:
-                                            if mess_sender in checked_entities:
-                                                pass
-                                                #TODO get data from the entity dict
-                                            else:
-                                                #TODO add data to checked_entitity
-                                                user_entity = await client.get_entity(mess_sender)
-                                                username = user_entity.username
-                                                first_name = user_entity.first_name
-                                                last_name = user_entity.last_name
-                                                full_name = f'{first_name}'
-                                                if last_name is not None:
-                                                    full_name += f' {last_name}'
-
-                                                if username is not None:
-                                                    self.all_checked_users[mess_sender] = username
-                                                
-                                                elif first_name is not None:
-                                                    self.all_checked_users[mess_sender] = full_name
-                                                
-                                                else:
-                                                    self.all_checked_users[mess_sender] = mess_sender
-                                    except:
-                                        pass
                                             
                                     if int_date in self.user_date_mess_count and mess_sender in self.user_date_mess_count[int_date]:
                                         self.user_date_mess_count[int_date][mess_sender] = self.user_date_mess_count[int_date][mess_sender] + 1
@@ -1711,7 +1671,6 @@ class Worker(QRunnable):
                         [self.bar, self.total_mess, self.counter, self.thread_num])
 
                     self.signal.date_counts.emit([self.date_mess_count, self.kpi_mess_count, self.date_hour_mess_count, self.kpi_hour_mess_count, self.user_date_mess_count, self.user_date_hour_mess_count])
-                    self.signal.counted_users.emit(self.all_checked_users)
                     total_all = 0
                     total_kpi = 0
                     self.message_data = dict(
@@ -1742,6 +1701,16 @@ class Worker(QRunnable):
                                     self.message_data[sender],
                                     self.row_number_all, id_num]
                                 self.row_number_all += 1
+                                
+                                if username is not None:
+                                    self.all_checked_users[sender] = username.lower()
+                                
+                                elif first_name is not None:
+                                    self.all_checked_users[sender] = full_name.lower()
+                                
+                                else:
+                                    self.all_checked_users[sender] = sender
+
                                 self.signal.row_data.emit(row_data)
 
                                 if sender in accounts:
@@ -1758,7 +1727,7 @@ class Worker(QRunnable):
                                 #print(exc_type, fname, exc_tb.tb_lineno, e)
 
                     self.signal.finished.emit([total_all, total_kpi, self.thread_num])
-                    #TODO emit checked entity for updating and saving to pickle
+                    self.signal.counted_users.emit(self.all_checked_users)
                     await client.disconnect()
                     try:
                         await client.disconnected
