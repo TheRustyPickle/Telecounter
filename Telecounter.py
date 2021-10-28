@@ -27,6 +27,9 @@ from Chart_Design import *
 #[ ]allow user_id/username to be added separately to the chart
 #[x]change legend names
 #[x]if hourly chart selected, show hours on top of the chart
+#[ ] add color order for each button pre-set
+#[ ] when addding to chart, make index 0 the furthest left available button
+#[ ] send proper data when counting by hours
 
 version = 'v2.1'
 new_version = ''
@@ -149,11 +152,13 @@ class main_form(QMainWindow):
         self.user_date_counts = {}
         self.user_date_hour_counts = {}
         self.added_in_chart = {}
+        self.user_selections = {}
         
         self.incomplete_sess = []
         self.session_list = []
         self.empty_buttons = []
         self.added_users = []
+        self.already_in_chart = []
 
         self.button_calender_1 = QPushButton(self.ui.box_starting_mess)
         self.button_calender_3 = QPushButton(self.ui.box_ending_date)
@@ -211,6 +216,7 @@ class main_form(QMainWindow):
         self.ui.listWidget.setVerticalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.ui.listWidget.setHorizontalScrollMode(QtWidgets.QAbstractItemView.ScrollPerPixel)
         self.ui.chart_type.currentIndexChanged.connect(self.chart_type_changed)
+        self.ui.add_user_box.currentTextChanged.connect(self.adding_to_chart)
         self.ui.chart_button_1.clicked.connect(lambda state, x=self.ui.chart_button_1: self.deleting_chart_value(x))
         self.ui.chart_button_2.clicked.connect(lambda state, x=self.ui.chart_button_2: self.deleting_chart_value(x))
         self.ui.chart_button_3.clicked.connect(lambda state, x=self.ui.chart_button_3: self.deleting_chart_value(x))
@@ -402,21 +408,80 @@ class main_form(QMainWindow):
 
     def deleting_chart_value(self, button_name):
         if button_name in self.added_in_chart:
+            self.already_in_chart.remove(self.added_in_chart[button_name])
             del self.added_in_chart[button_name]
             self.empty_buttons.append(button_name)
             button_name.setText('Empty')
+            self.reload_charts_date()
+
+    def adding_to_chart(self, user):
+        sel_value = self.user_selections[user]
+        if sel_value in self.already_in_chart:
+            pass
+        elif sel_value == '':
+            pass
+
+        else:
+            if self.empty_buttons == []:
+                pass
+            else:
+                taking_button = self.empty_buttons[0]
+                taking_button.setText(user)
+                self.empty_buttons.remove(taking_button)
+                self.added_in_chart[taking_button] = sel_value
+                self.already_in_chart.append(sel_value)
+                self.reload_charts_date()
+        
+    def reload_charts_date(self):
+
+        #if valued added or taken this function is called
+        #this one checks what buttons were added in the charts
+        #and sends relevant data to the chart designer 
+
+        other_values = []
+        kpi_mess_found = False
+        all_mess_found = False
+
+        for i in self.added_in_chart:
+    
+            if self.added_in_chart[i] == 'KPI Count':
+                kpi_mess_found = True
+
+            elif self.added_in_chart[i] == 'All Count':
+                all_mess_found = True
+
+            else:
+                other_values.append(self.added_in_chart[i])
+
+        self.log_chart.remove_widget()
+
+        if kpi_mess_found == True and all_mess_found == True:
+            self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, 
+                            self.user_date_counts, users_to_check=other_values)
+
+        elif kpi_mess_found == False and all_mess_found == True:
+            self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, 
+                    self.user_date_counts, kpi_selected=False, users_to_check=other_values)
+        
+        elif kpi_mess_found == True and all_mess_found == False:
+            self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, 
+                    self.user_date_counts, all_selected=False, users_to_check=other_values)
+        
+        elif kpi_mess_found == False and all_mess_found == False:
+            self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, 
+                    self.user_date_counts, all_selected=False, kpi_selected=False, users_to_check=other_values)
 
     def chart_type_changed(self, event):
         #sends event here when the combo box for changing chart type
         #current selected value changes
 
         if event == 1:
-            self.log_chart.remvove_widget()
-            self.log_chart.create_chart(self.date_hour_counts, self.date_hour_counts_kpi, True)
+            self.log_chart.remove_widget()
+            self.log_chart.create_chart(self.date_hour_counts, self.date_hour_counts_kpi, self.user_date_hour_counts, True)
 
         elif event == 0:
-            self.log_chart.remvove_widget()
-            self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, False)
+            self.log_chart.remove_widget()
+            self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, self.user_date_counts, False)
 
     def cell_copier(self):  #copies cells selected in the table widget
         self.all_cell_selected = {} 
@@ -1006,12 +1071,13 @@ class main_form(QMainWindow):
             self.enable_widgets()
             self.row_timer.stop()
             try:
-                self.log_chart.remvove_widget()
-                self.log_chart.create_chart(self.date_counts, self.date_counts_kpi)
+                self.log_chart.remove_widget()
+                self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, self.user_date_counts)
                 self.ui.chart_button_1.setText('All Count')
                 self.ui.chart_button_6.setText('KPI Count')
                 self.added_in_chart[self.ui.chart_button_1] = 'All Count'
                 self.added_in_chart[self.ui.chart_button_6] = 'KPI Count'
+                self.already_in_chart = ['All Count', 'KPI Count']
                 self.empty_buttons.remove(self.ui.chart_button_1)
                 self.empty_buttons.remove(self.ui.chart_button_6)
             except:
@@ -1167,8 +1233,15 @@ class main_form(QMainWindow):
                 pass
             else:
                 self.added_users.append(f'{users[user]}')
-
+                self.user_selections[users[user]] = user
+        self.added_users.append('')
+        self.added_users.append('All Count')
+        self.added_users.append('KPI Count')
         self.added_users.sort()    
+        self.user_selections = {str(v) : str(k) for k, v in users.items()}
+        self.user_selections[''] = ''
+        self.user_selections['All Count'] = 'All Count'
+        self.user_selections['KPI Count'] = 'KPI Count'
         self.ui.add_user_box.addItems(self.added_users)
 
     def client_starter(self):
@@ -1202,6 +1275,15 @@ class main_form(QMainWindow):
         self.finishing_data = {}
         self.date_counts = {}
         self.date_counts_kpi = {}
+        self.user_selections = {}
+        self.date_counts = {}
+        self.date_counts_kpi = {}
+        self.date_hour_counts = {}
+        self.date_hour_counts_kpi = {}
+        self.user_date_counts = {}
+        self.user_date_hour_counts = {}
+        self.added_in_chart = {}
+        self.added_users = []
 
         #verify the session selected/available ones and start the
         #main function which starts up the thread

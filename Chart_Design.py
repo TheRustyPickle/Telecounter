@@ -7,31 +7,52 @@ class create_chart(QWidget):
     def __init__(self, ui):
         super().__init__()
         self.ui = ui
-        self.cu_widget = ''
+        
         self.plot = pg.PlotWidget()
-        self.p1 = ''
         self.p2 = pg.ViewBox()
+
         self.all_data = {}
         self.kpi_data = {}
+        self.user_data = {}
+
         self.dates = []
+        self.users_to_check = []
+
+        self.p1 = ''
+        self.cu_widget = ''
         self.last_date = ''
+
         self.hourly_selected = False
+        self.all_selected = True
+        self.kpi_selected = True
+        
+        
         
 
-    def remvove_widget(self):
+    def remove_widget(self):
         #remove existing widget so the new one can be placed
-        if self.cu_widget != '':
-            self.ui.verticalLayout_11.removeWidget(self.cu_widget)
-        
+        try:
+            if self.cu_widget != '':
+                self.ui.verticalLayout_11.removeWidget(self.cu_widget)
+                self.cu_widget.deleteLater()
+                self.cu_widget = None
+        except:
+            pass
+
     def updateViews(self):
         #don't know what it does. taken from pyqtgraph examples
         self.p2.setGeometry(self.p1.vb.sceneBoundingRect())
         self.p2.linkedViewChanged(self.p1.vb, self.p2.XAxis)
 
-    def create_chart(self, data, kpi_data, hourly=False):
+    def create_chart(self, data, kpi_data, user_data, hourly=False, kpi_selected=True, all_selected=True, users_to_check=[]):
         self.hourly_selected = hourly
+        self.all_selected = all_selected
+        self.kpi_selected = kpi_selected
+        self.users_to_check = users_to_check
+
         data = dict(sorted(data.items()))
-        if hourly ==False:
+        
+        if hourly == False:
             first_key = list(data.keys())[0]
             last_key = list(data.keys())[-1]
             first_date = datetime.datetime(int(str(first_key)[:4]), int(str(first_key)[4:6]), int(str(first_key)[6:8]))
@@ -43,10 +64,17 @@ class create_chart(QWidget):
 
                 if int_first_date not in data:
                     data[int_first_date] = 0
+                
+                if int_first_date not in kpi_data:
+                    kpi_data[int_first_date] = 0
+                
+                if int_first_date not in user_data:
+                    user_data[int_first_date] = {}
         
         data = dict(sorted(data.items()))
         self.all_data = data
         self.kpi_data = kpi_data
+        self.user_data = user_data
         self.dates = []
 
         self.plot = pg.PlotWidget()
@@ -79,7 +107,11 @@ class create_chart(QWidget):
         for i in data:
             self.dates.append(i)
             axis_x_all.append(num)
-            axis_y_all.append(data[i])
+            
+            if self.all_selected == True:
+                axis_y_all.append(data[i])
+            else:
+                axis_y_all.append(0)
 
             if cu_next != 0:
                 cu_next -= 1
@@ -108,8 +140,30 @@ class create_chart(QWidget):
         self.plot.addLegend()
         xax.setTicks(x_labels)
         xax_2.setTicks(x_top_labels)
-        self.plot.plot(axis_x_all, axis_y_all, name="Total Message", pen='b')
-        self.plot.plot(axis_x_kpi, axis_y_kpi, name='KPI Message', pen='g')
+
+        if self.all_selected == True:
+            self.plot.plot(axis_x_all, axis_y_all, name="Total Message", pen='b')
+        else:
+            self.plot.plot(axis_x_all, axis_y_all, pen='k')
+
+        if self.kpi_selected == True:
+            self.plot.plot(axis_x_kpi, axis_y_kpi, name='KPI Message', pen='g')
+
+        if users_to_check != []:
+            for user in users_to_check:
+                user = int(user)
+                user_x_value = []
+                user_y_value = []
+                num = 0
+                for date in user_data:
+                    user_x_value.append(num)
+                    if user in user_data[date]:
+                        user_y_value.append(int(user_data[date][user]))
+                    else:
+                        user_y_value.append(0)
+                    num += 1
+                self.plot.plot(user_x_value, user_y_value, name=f"{user}", pen='b')
+
         self.cu_widget = self.plot
         self.ui.verticalLayout_11.addWidget(self.plot)
 
