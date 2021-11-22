@@ -24,12 +24,21 @@ from Chart_Design import *
 #[x]add a crosshair
 #[x]show value of x and y on hover
 #[x]ability to show both hourly and day based chart
-#[ ]allow user_id/username to be added separately to the chart
+#[x]allow user_id/username to be added separately to the chart
 #[x]change legend names
 #[x]if hourly chart selected, show hours on top of the chart
-#[ ] add color order for each button pre-set
-#[ ] when addding to chart, make index 0 the furthest left available button
+#[x] add color order for each button pre-set
+#[x] when addding to chart, make index 0 the furthest left available button
 #[ ] send proper data when counting by hours
+#[ ] test worker class for entity getting
+#[ ] avoid doing entity for the same user twice, global variable
+#[x] same user going twice in add user combobox with multi_session
+#[ ] code number has expired error message
+#[ ] keep a default useless api_id and hash and remove extra buttons from session creator
+#[ ] session name cannot be empty
+#[ ] check people joining message, uncount them
+#[ ] if no user is added to charts, don't respond to hourly or daily changes
+#[ ] if same value selected + not in chart does not work
 
 version = 'v2.1'
 new_version = ''
@@ -152,7 +161,12 @@ class main_form(QMainWindow):
         self.user_date_counts = {}
         self.user_date_hour_counts = {}
         self.added_in_chart = {}
+        self.added_in_chart_reverse = {}
         self.user_selections = {}
+        self.chart_button_color = {self.ui.chart_button_1 : 'blue', self.ui.chart_button_2 : (199, 0, 57), self.ui.chart_button_3 : (194, 221, 147),
+                self.ui.chart_button_4 : (222, 194, 179), self.ui.chart_button_5 : (154, 101, 255), self.ui.chart_button_6 : (72, 228, 143), 
+                self.ui.chart_button_7 : (255, 195, 0), self.ui.chart_button_8 : (147, 157, 221), self.ui.chart_button_9 : (59, 228, 202), 
+                self.ui.chart_button_10 : (238, 255, 11)}
         
         self.incomplete_sess = []
         self.session_list = []
@@ -292,6 +306,7 @@ class main_form(QMainWindow):
         self.ui.resize(628, 325) 
         self.ui.box_ending_date.hide()
         self.ui.box_ending_date.clear()
+        self.ui.box_starting_mess.clear()
         self.ui.box_starting_mess.setMinimumSize(350, 35)
         self.ui.box_ending_date.setMaximumSize(0, 35)
         self.ui.button_clear_1.show()
@@ -307,6 +322,8 @@ class main_form(QMainWindow):
             self.starting_paste = False
         self.ui.box_starting_mess.setToolTip('Start count from this essage ink')
         self.ui.box_ending_mess.setToolTip('End count from this essage ink')
+        self.ui.setMinimumSize(0,0) 
+        self.ui.resize(628, 325) 
 
     def box_decider(self):
         starting_mess_text = self.ui.box_starting_mess.text()
@@ -342,11 +359,11 @@ class main_form(QMainWindow):
             self.ui.resize(628, 588) 
             self.ui.calender.show() 
             self.box_selected = 'box_starting_mess'
-            self.box_decider()
             self.ui.box_starting_mess.setFocus()
             selected_date = self.ui.calender.selectedDate().toString("dd-MM-yyyy")
             self.ui.box_starting_mess.clear()
             self.ui.box_starting_mess.setText(selected_date)
+            self.box_decider()
 
     def calender_display_3(self):
         if self.ui.calender.isVisible():
@@ -360,11 +377,11 @@ class main_form(QMainWindow):
             self.ui.resize(628, 588) 
             self.ui.calender.show()
             self.box_selected = 'box_starting_mess'
-            self.box_decider()
             self.ui.box_starting_mess.setFocus()
             selected_date = self.ui.calender.selectedDate().toString("dd-MM-yyyy")
             self.ui.box_starting_mess.clear()
             self.ui.box_starting_mess.setText(selected_date)
+            self.box_decider()
 
     def focus_change(self, old, new):
         try:
@@ -373,6 +390,14 @@ class main_form(QMainWindow):
                 self.box_selected = new_widg
         except:
             pass
+        
+    def sort_empty_buttons(self):
+        self.empty_buttons = []
+        for i in self.chart_button_color:
+            if i in self.added_in_chart:
+                pass
+            else:
+                self.empty_buttons.append(i)
 
     def calender_event(self):
         selected_date = self.ui.calender.selectedDate().toString("dd-MM-yyyy")
@@ -390,7 +415,7 @@ class main_form(QMainWindow):
     def check_update(self):  # for opening the new version available window
         print('Current Version', version)
         version_num = float(version.split('v')[1])
-        new_version_num = float(new_version.split('v')[1])
+        new_version_num = float(new_version.split('v')[1])  #error here
         if version_num < new_version_num:
             self.w = version_form()
             self.w.show()
@@ -410,8 +435,10 @@ class main_form(QMainWindow):
         if button_name in self.added_in_chart:
             self.already_in_chart.remove(self.added_in_chart[button_name])
             del self.added_in_chart[button_name]
+            self.added_in_chart_reverse = {v: k for k, v in self.added_in_chart.items()}
             self.empty_buttons.append(button_name)
             button_name.setText('Empty')
+            self.sort_empty_buttons()
             self.reload_charts_date()
 
     def adding_to_chart(self, user):
@@ -429,7 +456,9 @@ class main_form(QMainWindow):
                 taking_button.setText(user)
                 self.empty_buttons.remove(taking_button)
                 self.added_in_chart[taking_button] = sel_value
+                self.added_in_chart_reverse = {v: k for k, v in self.added_in_chart.items()}
                 self.already_in_chart.append(sel_value)
+                self.sort_empty_buttons()
                 self.reload_charts_date()
         
     def reload_charts_date(self):
@@ -454,22 +483,26 @@ class main_form(QMainWindow):
                 other_values.append(self.added_in_chart[i])
 
         self.log_chart.remove_widget()
-
+        #TODO just pass the true false variable instead of doing if else
         if kpi_mess_found == True and all_mess_found == True:
             self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, 
-                            self.user_date_counts, users_to_check=other_values)
+                            self.user_date_counts, users_to_check=other_values, button_colors=self.chart_button_color, 
+                            chart_used_buttons=self.added_in_chart_reverse)
 
         elif kpi_mess_found == False and all_mess_found == True:
             self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, 
-                    self.user_date_counts, kpi_selected=False, users_to_check=other_values)
+                    self.user_date_counts, kpi_selected=False, users_to_check=other_values, button_colors=self.chart_button_color, 
+                            chart_used_buttons=self.added_in_chart_reverse)
         
         elif kpi_mess_found == True and all_mess_found == False:
             self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, 
-                    self.user_date_counts, all_selected=False, users_to_check=other_values)
+                    self.user_date_counts, all_selected=False, users_to_check=other_values, button_colors=self.chart_button_color, 
+                            chart_used_buttons=self.added_in_chart_reverse)
         
         elif kpi_mess_found == False and all_mess_found == False:
             self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, 
-                    self.user_date_counts, all_selected=False, kpi_selected=False, users_to_check=other_values)
+                    self.user_date_counts, all_selected=False, kpi_selected=False, users_to_check=other_values, button_colors=self.chart_button_color, 
+                            chart_used_buttons=self.added_in_chart_reverse)
 
     def chart_type_changed(self, event):
         #sends event here when the combo box for changing chart type
@@ -477,11 +510,13 @@ class main_form(QMainWindow):
 
         if event == 1:
             self.log_chart.remove_widget()
-            self.log_chart.create_chart(self.date_hour_counts, self.date_hour_counts_kpi, self.user_date_hour_counts, True)
+            self.log_chart.create_chart(self.date_hour_counts, self.date_hour_counts_kpi, self.user_date_hour_counts, True, button_colors=self.chart_button_color, 
+                            chart_used_buttons=self.added_in_chart_reverse)
 
         elif event == 0:
             self.log_chart.remove_widget()
-            self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, self.user_date_counts, False)
+            self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, self.user_date_counts, False, button_colors=self.chart_button_color, 
+                            chart_used_buttons=self.added_in_chart_reverse)
 
     def cell_copier(self):  #copies cells selected in the table widget
         self.all_cell_selected = {} 
@@ -491,8 +526,8 @@ class main_form(QMainWindow):
 
         #format {row{column:value}}
         #keeping track of row and column so they can be sorted numerically
-        #sorting is necessary because if random selectedItems in sorted format rather
-        #by the order they were selected. Sort happens by row => column order
+        #sorting is necessary because selectedItems is created by keeping row/column
+        #in mind. Sort happens by row => column order
 
         full_text = ''
         current_tab = self.ui.tabWidget.currentIndex() 
@@ -555,7 +590,10 @@ class main_form(QMainWindow):
 
         if self.all_cell_selected != {} or self.kpi_cell_selected  != {}:
             if current_tab == 1:
+                print(full_text)
+                print('here')
                 pyperclip.copy(full_text)
+                print('done')
                 self.ui.statusBar().showMessage(f'Cells Copied')
                 self.clear_statusbar.start()
 
@@ -572,9 +610,9 @@ class main_form(QMainWindow):
         self.ui.resize(628, 325)  
 
         if self.ui.tabWidget.currentIndex() == 1:
-            self.resize(850, 400)
+            self.resize(1050, 400)
         elif self.ui.tabWidget.currentIndex() == 2:
-            self.resize(628, 550)
+            self.resize(700, 550)
         else:
             self.ui.resize(628, 325) 
 
@@ -1072,12 +1110,14 @@ class main_form(QMainWindow):
             self.row_timer.stop()
             try:
                 self.log_chart.remove_widget()
-                self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, self.user_date_counts)
-                self.ui.chart_button_1.setText('All Count')
-                self.ui.chart_button_6.setText('KPI Count')
                 self.added_in_chart[self.ui.chart_button_1] = 'All Count'
                 self.added_in_chart[self.ui.chart_button_6] = 'KPI Count'
+                self.added_in_chart_reverse = {v: k for k, v in self.added_in_chart.items()}
+                self.ui.chart_button_1.setText('All Count')
+                self.ui.chart_button_6.setText('KPI Count')
                 self.already_in_chart = ['All Count', 'KPI Count']
+                self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, self.user_date_counts, button_colors=self.chart_button_color, 
+                            chart_used_buttons=self.added_in_chart_reverse)
                 self.empty_buttons.remove(self.ui.chart_button_1)
                 self.empty_buttons.remove(self.ui.chart_button_6)
             except:
@@ -1229,19 +1269,22 @@ class main_form(QMainWindow):
         #adds to the combobox in the chart tab
         self.ui.add_user_box.clear()
         for user in users:
-            if user in self.added_users:
+            if users[user] in self.added_users:
                 pass
             else:
                 self.added_users.append(f'{users[user]}')
                 self.user_selections[users[user]] = user
-        self.added_users.append('')
-        self.added_users.append('All Count')
-        self.added_users.append('KPI Count')
-        self.added_users.sort()    
-        self.user_selections = {str(v) : str(k) for k, v in users.items()}
-        self.user_selections[''] = ''
-        self.user_selections['All Count'] = 'All Count'
-        self.user_selections['KPI Count'] = 'KPI Count'
+        if 'All Count' in self.added_users:
+            pass
+        else:
+            self.added_users.append('')
+            self.added_users.append('All Count')
+            self.added_users.append('KPI Count')
+            self.added_users.sort()    
+            self.user_selections = {str(v) : str(k) for k, v in users.items()}
+            self.user_selections[''] = ''
+            self.user_selections['All Count'] = 'All Count'
+            self.user_selections['KPI Count'] = 'KPI Count'
         self.ui.add_user_box.addItems(self.added_users)
 
     def client_starter(self):
@@ -1446,7 +1489,7 @@ class main_form(QMainWindow):
         #message starts from 0 to 100 message ID it will go like this
         #Sess 1 = 0-25, Sess 2 = 25-50 Sess 2 = 50-75 Sess 2 = 75-100
 
-        for i in range(total_max_thread, -1, -1, -1):
+        for i in range(total_max_thread-1, -1, -1):
             if i == total_max_thread -1:
                 parts_start[available_sess[i]] = new_starting
                 parts_end[available_sess[i]] = new_starting + part_value
