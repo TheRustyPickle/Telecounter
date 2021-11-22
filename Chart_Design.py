@@ -44,11 +44,14 @@ class create_chart(QWidget):
         self.p2.setGeometry(self.p1.vb.sceneBoundingRect())
         self.p2.linkedViewChanged(self.p1.vb, self.p2.XAxis)
 
-    def create_chart(self, data, kpi_data, user_data, hourly=False, kpi_selected=True, all_selected=True, users_to_check=[]):
+    def create_chart(self, data, kpi_data, user_data, hourly=False, kpi_selected=True, 
+                     all_selected=True, users_to_check=[], button_colors={}, chart_used_buttons={}):
         self.hourly_selected = hourly
         self.all_selected = all_selected
         self.kpi_selected = kpi_selected
         self.users_to_check = users_to_check
+        self.button_colors = button_colors
+        self.chart_used_buttons = chart_used_buttons
 
         data = dict(sorted(data.items()))
         
@@ -142,12 +145,12 @@ class create_chart(QWidget):
         xax_2.setTicks(x_top_labels)
 
         if self.all_selected == True:
-            self.plot.plot(axis_x_all, axis_y_all, name="Total Message", pen='b')
+            self.plot.plot(axis_x_all, axis_y_all, name="Total Message", pen=pg.mkPen(self.button_colors[self.chart_used_buttons['All Count']]))
         else:
             self.plot.plot(axis_x_all, axis_y_all, pen='k')
 
         if self.kpi_selected == True:
-            self.plot.plot(axis_x_kpi, axis_y_kpi, name='KPI Message', pen='g')
+            self.plot.plot(axis_x_kpi, axis_y_kpi, name='KPI Message', pen=pg.mkPen(self.button_colors[self.chart_used_buttons['KPI Count']]))
 
         if users_to_check != []:
             for user in users_to_check:
@@ -155,14 +158,14 @@ class create_chart(QWidget):
                 user_x_value = []
                 user_y_value = []
                 num = 0
-                for date in user_data:
+                for date in data:
                     user_x_value.append(num)
                     if user in user_data[date]:
                         user_y_value.append(int(user_data[date][user]))
                     else:
                         user_y_value.append(0)
                     num += 1
-                self.plot.plot(user_x_value, user_y_value, name=f"{user}", pen='b')
+                self.plot.plot(user_x_value, user_y_value, name=f"{user}", pen=pg.mkPen(self.button_colors[self.chart_used_buttons[f'{user}']]))
 
         self.cu_widget = self.plot
         self.ui.verticalLayout_11.addWidget(self.plot)
