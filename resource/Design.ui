@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>650</width>
-    <height>610</height>
+    <height>663</height>
    </rect>
   </property>
   <property name="maximumSize">
@@ -319,7 +319,7 @@ color: #48E48F
             </property>
             <property name="font">
              <font>
-              <pointsize>13</pointsize>
+              <pointsize>12</pointsize>
              </font>
             </property>
             <property name="toolTip">
@@ -500,6 +500,11 @@ color: #48E48F
               <width>0</width>
               <height>35</height>
              </size>
+            </property>
+            <property name="font">
+             <font>
+              <pointsize>13</pointsize>
+             </font>
             </property>
             <property name="placeholderText">
              <string>Ending Date'</string>
@@ -2797,7 +2802,7 @@ Unlock buttons
      <x>0</x>
      <y>0</y>
      <width>650</width>
-     <height>24</height>
+     <height>30</height>
     </rect>
    </property>
   </widget>
