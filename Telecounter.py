@@ -29,7 +29,7 @@ from Chart_Design import *
 #[x]if hourly chart selected, show hours on top of the chart
 #[x] add color order for each button pre-set
 #[x] when addding to chart, make index 0 the furthest left available button
-#[ ] send proper data when counting by hours
+#[x] send proper data when counting by hours
 #[ ] test worker class for entity getting
 #[ ] avoid doing entity for the same user twice, global variable
 #[x] same user going twice in add user combobox with multi_session
@@ -39,6 +39,20 @@ from Chart_Design import *
 #[ ] check people joining message, uncount them
 #[ ] if no user is added to charts, don't respond to hourly or daily changes
 #[ ] if same value selected + not in chart does not work
+#[ ] multi session date not detecting latest message and dividing properly
+#[ ] chart showing inaccurate KPI number
+#[ ] copy function not working in kde. Find a different library
+#[ ] change button/chart colors to something that does not match with existing ones
+#[ ] mult session not working properly for charts
+
+'''Traceback (most recent call last):
+  File "/run/media/sakib0194/B24222C442228CE3/Projects/Self_Created/Telecounter/Telecounter.py", line 463, in adding_to_chart
+    self.reload_charts_date()
+  File "/run/media/sakib0194/B24222C442228CE3/Projects/Self_Created/Telecounter/Telecounter.py", line 499, in reload_charts_date
+    self.log_chart.create_chart(self.date_countdate_countss, self.date_counts_kpi, 
+  File "/run/media/sakib0194/B24222C442228CE3/Projects/Self_Created/Telecounter/Chart_Design.py", line 168, in create_chart
+    self.plot.plot(user_x_value, user_y_value, name=f"{user}", pen=pg.mkPen(self.button_colors[self.chart_used_buttons[f'{user}']]))
+KeyError: '1567785138'''
 
 version = 'v2.1'
 new_version = ''
@@ -439,27 +453,39 @@ class main_form(QMainWindow):
             self.empty_buttons.append(button_name)
             button_name.setText('Empty')
             self.sort_empty_buttons()
-            self.reload_charts_date()
+            self.reload_charts_router()
 
     def adding_to_chart(self, user):
-        sel_value = self.user_selections[user]
-        if sel_value in self.already_in_chart:
+        if user == '':
             pass
-        elif sel_value == '':
-            pass
-
         else:
-            if self.empty_buttons == []:
+            sel_value = self.user_selections[user]
+            if sel_value in self.already_in_chart:
                 pass
+            elif sel_value == '':
+                pass
+
             else:
-                taking_button = self.empty_buttons[0]
-                taking_button.setText(user)
-                self.empty_buttons.remove(taking_button)
-                self.added_in_chart[taking_button] = sel_value
-                self.added_in_chart_reverse = {v: k for k, v in self.added_in_chart.items()}
-                self.already_in_chart.append(sel_value)
-                self.sort_empty_buttons()
-                self.reload_charts_date()
+                if self.empty_buttons == []:
+                    pass
+                else:
+                    taking_button = self.empty_buttons[0]
+                    taking_button.setText(user)
+                    self.empty_buttons.remove(taking_button)
+                    self.added_in_chart[taking_button] = sel_value
+                    self.added_in_chart_reverse = {v: k for k, v in self.added_in_chart.items()}
+                    self.already_in_chart.append(sel_value)
+                    self.sort_empty_buttons()
+                    self.reload_charts_router()
+                
+    def reload_charts_router(self):
+        cu_chart_type = self.ui.chart_type.currentIndex()
+        
+        if cu_chart_type == 1:
+            self.reload_charts_hour()
+
+        elif cu_chart_type == 0:
+            self.reload_charts_date()
         
     def reload_charts_date(self):
 
@@ -483,40 +509,44 @@ class main_form(QMainWindow):
                 other_values.append(self.added_in_chart[i])
 
         self.log_chart.remove_widget()
-        #TODO just pass the true false variable instead of doing if else
-        if kpi_mess_found == True and all_mess_found == True:
-            self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, 
-                            self.user_date_counts, users_to_check=other_values, button_colors=self.chart_button_color, 
-                            chart_used_buttons=self.added_in_chart_reverse)
+        
+        self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, 
+                    self.user_date_counts, kpi_selected=kpi_mess_found, all_selected=all_mess_found, 
+                    users_to_check=other_values, button_colors=self.chart_button_color, 
+                    chart_used_buttons=self.added_in_chart_reverse)
+                            
+    def reload_charts_hour(self):
+        other_values = []
+        kpi_mess_found = False
+        all_mess_found = False
 
-        elif kpi_mess_found == False and all_mess_found == True:
-            self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, 
-                    self.user_date_counts, kpi_selected=False, users_to_check=other_values, button_colors=self.chart_button_color, 
-                            chart_used_buttons=self.added_in_chart_reverse)
+        for i in self.added_in_chart:
+    
+            if self.added_in_chart[i] == 'KPI Count':
+                kpi_mess_found = True
+
+            elif self.added_in_chart[i] == 'All Count':
+                all_mess_found = True
+
+            else:
+                other_values.append(self.added_in_chart[i])
+
+        self.log_chart.remove_widget()
         
-        elif kpi_mess_found == True and all_mess_found == False:
-            self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, 
-                    self.user_date_counts, all_selected=False, users_to_check=other_values, button_colors=self.chart_button_color, 
-                            chart_used_buttons=self.added_in_chart_reverse)
-        
-        elif kpi_mess_found == False and all_mess_found == False:
-            self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, 
-                    self.user_date_counts, all_selected=False, kpi_selected=False, users_to_check=other_values, button_colors=self.chart_button_color, 
-                            chart_used_buttons=self.added_in_chart_reverse)
+        self.log_chart.create_chart(self.date_hour_counts, self.date_hour_counts_kpi,
+                    self.user_date_hour_counts, hourly=True, kpi_selected=kpi_mess_found, all_selected=all_mess_found, 
+                    users_to_check=other_values, button_colors=self.chart_button_color, 
+                    chart_used_buttons=self.added_in_chart_reverse)
 
     def chart_type_changed(self, event):
         #sends event here when the combo box for changing chart type
         #current selected value changes
 
         if event == 1:
-            self.log_chart.remove_widget()
-            self.log_chart.create_chart(self.date_hour_counts, self.date_hour_counts_kpi, self.user_date_hour_counts, True, button_colors=self.chart_button_color, 
-                            chart_used_buttons=self.added_in_chart_reverse)
+            self.reload_charts_hour()
 
         elif event == 0:
-            self.log_chart.remove_widget()
-            self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, self.user_date_counts, False, button_colors=self.chart_button_color, 
-                            chart_used_buttons=self.added_in_chart_reverse)
+            self.reload_charts_date()
 
     def cell_copier(self):  #copies cells selected in the table widget
         self.all_cell_selected = {} 
@@ -1682,6 +1712,37 @@ class Worker(QRunnable):
                                 print('Error while getting date')
                             try:
                                 try:
+                                    try:
+                                        #adds date data, message amount to dict for passing it to the charts
+                                        #
+                                        if message.from_id.user_id in accounts:
+                                            int_date = int(self.date_today.strftime("%Y%m%d"))
+                                            if int_date in self.kpi_mess_count:
+                                                self.kpi_mess_count[int_date] += 1
+                                            else:
+                                                self.kpi_mess_count[int_date] = 1
+
+                                            int_hour_date = int(self.date_today.strftime("%Y%m%d%H"))
+                                            if int_hour_date in self.kpi_hour_mess_count:
+                                                self.kpi_hour_mess_count[int_hour_date] += 1
+                                            else:
+                                                self.kpi_hour_mess_count[int_hour_date] = 1
+
+                                    except Exception as e:
+                                        print('Error while adding KPI Date')
+                                        print(e)
+                                    
+                                    try:
+                                        #keeps track of message length for counting average character
+                                        mess_text = message.message
+                                        mess_len = len(str(mess_text))
+                                        if mess_len == 0:
+                                            mess_len = 1    #if it's a sticker len is going to be 0, so make it 1
+                                        self.signal.mess_char.emit([message.from_id.user_id, mess_len])
+                                    except Exception as e:
+                                        exc_type, exc_obj, exc_tb = sys.exc_info()
+                                        fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
+                                        #print(exc_type, fname, exc_tb.tb_lineno, e)
 
                                     #for keeping track of message data by each user
                                     mess_sender = message.from_id.user_id
@@ -1713,30 +1774,12 @@ class Worker(QRunnable):
                                         self.total_mess += self.last_id - message.id
                                         self.last_id = message.id
                                         self.pending_message += 1
+                                        if message.from_id.user_id in accounts:
+                                            self.counter += 1
 
-                                        #pending controls the bar value. So after each message add the 
-                                        #message value * how many many messages. Message passed calculated
-                                        #by the last message id that was counted - current id 
-
-                                        try:
-                                            if message.from_id.user_id in accounts:
-                                                self.counter += 1
-
-                                                int_date = int(self.date_today.strftime("%Y%m%d"))
-                                                if int_date in self.kpi_mess_count:
-                                                    self.kpi_mess_count[int_date] += 1
-                                                else:
-                                                    self.kpi_mess_count[int_date] = 1
-
-                                                int_hour_date = int(self.date_today.strftime("%Y%m%d%H"))
-                                                if int_hour_date in self.kpi_hour_mess_count:
-                                                    self.kpi_hour_mess_count[int_hour_date] += 1
-                                                else:
-                                                    self.kpi_hour_mess_count[int_hour_date] = 1
-
-                                        except Exception as e:
-                                            print('Error while adding KPI Date')
-                                            print(e)
+                                    #pending controls the bar value. So after each message add the 
+                                    #message value * how many many messages. Message passed calculated
+                                    #by the last message id that was counted - current id 
 
                                     if self.pending > 1:
                                         if self.bar != self.max_bar:
@@ -1761,19 +1804,6 @@ class Worker(QRunnable):
                                     exc_type, exc_obj, exc_tb = sys.exc_info()
                                     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                                     #print(exc_type, fname, exc_tb.tb_lineno, e)
-
-
-                                try:
-                                    mess_text = message.message
-                                    mess_len = len(str(mess_text))
-                                    if mess_len == 0:
-                                        mess_len = 1    #if it's a sticker len is going to be 0, so make it 1
-                                    self.signal.mess_char.emit([message.from_id.user_id, mess_len])
-                                except Exception as e:
-                                    exc_type, exc_obj, exc_tb = sys.exc_info()
-                                    fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                                    #print(exc_type, fname, exc_tb.tb_lineno, e)
-
                                 
                             except Exception as e:
                                 exc_type, exc_obj, exc_tb = sys.exc_info()

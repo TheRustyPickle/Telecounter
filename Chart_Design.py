@@ -2,6 +2,7 @@ from PyQt5.QtWidgets import QWidget
 from pyqtgraph.Qt import QtGui as graphGui
 from pyqtgraph.Qt import QtCore as graphCore
 import pyqtgraph as pg
+from PyQt5 import QtWidgets
 import datetime
 class create_chart(QWidget):
     def __init__(self, ui):
@@ -25,9 +26,6 @@ class create_chart(QWidget):
         self.hourly_selected = False
         self.all_selected = True
         self.kpi_selected = True
-        
-        
-        
 
     def remove_widget(self):
         #remove existing widget so the new one can be placed
@@ -36,6 +34,8 @@ class create_chart(QWidget):
                 self.ui.verticalLayout_11.removeWidget(self.cu_widget)
                 self.cu_widget.deleteLater()
                 self.cu_widget = None
+                verticalSpacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding) 
+                self.ui.verticalLayout_11.addWidget(verticalSpacer)
         except:
             pass
 
@@ -56,14 +56,40 @@ class create_chart(QWidget):
         data = dict(sorted(data.items()))
         
         if hourly == False:
+            #there might be dates missing between messages. So added the missing dates and put the values to 0
             first_key = list(data.keys())[0]
             last_key = list(data.keys())[-1]
+            
+            #convert the date INTs to datetime and go through from start to last dates and add all missing dates
+            
             first_date = datetime.datetime(int(str(first_key)[:4]), int(str(first_key)[4:6]), int(str(first_key)[6:8]))
             last_date = datetime.datetime(int(str(last_key)[:4]), int(str(last_key)[4:6]), int(str(last_key)[6:8]))
 
             while first_date <= last_date:
                 first_date += datetime.timedelta(days=1)
                 int_first_date = int(first_date.strftime("%Y%m%d"))
+
+                if int_first_date not in data:
+                    data[int_first_date] = 0
+                
+                if int_first_date not in kpi_data:
+                    kpi_data[int_first_date] = 0
+                
+                if int_first_date not in user_data:
+                    user_data[int_first_date] = {}
+        
+        elif hourly == True:
+            first_key = list(data.keys())[0]
+            last_key = list(data.keys())[-1]
+            
+            #same as dates but on hourly values
+            
+            first_date = datetime.datetime(int(str(first_key)[:4]), int(str(first_key)[4:6]), int(str(first_key)[6:8]), int(str(first_key)[8:]))
+            last_date = datetime.datetime(int(str(last_key)[:4]), int(str(last_key)[4:6]), int(str(last_key)[6:8]), int(str(last_key)[8:]))
+                    
+            while first_date <= last_date:
+                first_date += datetime.timedelta(hours=1)
+                int_first_date = int(first_date.strftime("%Y%m%d%H"))
 
                 if int_first_date not in data:
                     data[int_first_date] = 0
