@@ -210,7 +210,7 @@ QComboBox:hover {
 
 QComboBox::down-arrow
 {
-background-color : grey;
+background-color : #3DD080;
 }
 
 QComboBox::down-arrow:hover
@@ -1634,6 +1634,9 @@ border-style: inset;
                   <width>120</width>
                   <height>30</height>
                  </size>
+                </property>
+                <property name="editable">
+                 <bool>false</bool>
                 </property>
                </widget>
               </item>
