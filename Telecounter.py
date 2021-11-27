@@ -39,11 +39,11 @@ from Chart_Design import *
 #[ ] check people joining message, uncount them
 #[ ] if no user is added to charts, don't respond to hourly or daily changes
 #[ ] if same value selected + not in chart does not work
-#[ ] multi session date not detecting latest message and dividing properly
-#[ ] chart showing inaccurate KPI number
-#[ ] copy function not working in kde. Find a different library
+#[ ] multi session date not detecting latest message and dividing properly, wait until all sessions are either rejected or complete
+#[x] chart showing inaccurate KPI number
+#[x] copy function not working in kde. Find a different library
 #[ ] change button/chart colors to something that does not match with existing ones
-#[ ] mult session not working properly for charts
+#[x] mult session not working properly for charts
 
 '''Traceback (most recent call last):
   File "/run/media/sakib0194/B24222C442228CE3/Projects/Self_Created/Telecounter/Telecounter.py", line 463, in adding_to_chart
@@ -462,8 +462,6 @@ class main_form(QMainWindow):
             sel_value = self.user_selections[user]
             if sel_value in self.already_in_chart:
                 pass
-            elif sel_value == '':
-                pass
 
             else:
                 if self.empty_buttons == []:
@@ -620,10 +618,9 @@ class main_form(QMainWindow):
 
         if self.all_cell_selected != {} or self.kpi_cell_selected  != {}:
             if current_tab == 1:
-                print(full_text)
-                print('here')
-                pyperclip.copy(full_text)
-                print('done')
+                cb = QApplication.clipboard()
+                cb.clear(mode=cb.Clipboard)
+                cb.setText(full_text, mode=cb.Clipboard)
                 self.ui.statusBar().showMessage(f'Cells Copied')
                 self.clear_statusbar.start()
 
@@ -1304,17 +1301,24 @@ class main_form(QMainWindow):
             else:
                 self.added_users.append(f'{users[user]}')
                 self.user_selections[users[user]] = user
+        
+        #during multi session to prevent previous data to get lost
+        old_user_selection = self.user_selections
+        self.user_selections = {str(v) : str(k) for k, v in users.items()}
+        for i in old_user_selection:
+            if i not in self.user_selections:
+                self.user_selections[i] = old_user_selection[i]
+                
         if 'All Count' in self.added_users:
             pass
         else:
             self.added_users.append('')
             self.added_users.append('All Count')
             self.added_users.append('KPI Count')
-            self.added_users.sort()    
-            self.user_selections = {str(v) : str(k) for k, v in users.items()}
             self.user_selections[''] = ''
             self.user_selections['All Count'] = 'All Count'
             self.user_selections['KPI Count'] = 'KPI Count'
+        self.added_users.sort()   
         self.ui.add_user_box.addItems(self.added_users)
 
     def client_starter(self):
