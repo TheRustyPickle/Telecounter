@@ -36,23 +36,19 @@ from Chart_Design import *
 #[ ] code number has expired error message
 #[ ] keep a default useless api_id and hash and remove extra buttons from session creator
 #[ ] session name cannot be empty
-#[ ] check people joining message, uncount them
-#[ ] if no user is added to charts, don't respond to hourly or daily changes
+#[x] check people joining message, uncount them
+#[x] if no user is added to charts, don't respond to hourly or daily changes
 #[ ] if same value selected + not in chart does not work
 #[ ] multi session date not detecting latest message and dividing properly, wait until all sessions are either rejected or complete
 #[x] chart showing inaccurate KPI number
 #[x] copy function not working in kde. Find a different library
 #[ ] change button/chart colors to something that does not match with existing ones
 #[x] mult session not working properly for charts
-
-'''Traceback (most recent call last):
-  File "/run/media/sakib0194/B24222C442228CE3/Projects/Self_Created/Telecounter/Telecounter.py", line 463, in adding_to_chart
-    self.reload_charts_date()
-  File "/run/media/sakib0194/B24222C442228CE3/Projects/Self_Created/Telecounter/Telecounter.py", line 499, in reload_charts_date
-    self.log_chart.create_chart(self.date_countdate_countss, self.date_counts_kpi, 
-  File "/run/media/sakib0194/B24222C442228CE3/Projects/Self_Created/Telecounter/Chart_Design.py", line 168, in create_chart
-    self.plot.plot(user_x_value, user_y_value, name=f"{user}", pen=pg.mkPen(self.button_colors[self.chart_used_buttons[f'{user}']]))
-KeyError: '1567785138'''
+#[x] change legend to names
+#[x] limit chart button and legend length to 15
+#[ ] add exit prompt only if counting
+#[x] add user name on tooltip
+#[x] set all button text to empty on count
 
 version = 'v2.1'
 new_version = ''
@@ -126,7 +122,7 @@ class main_form(QMainWindow):
 
         self.manager = id_manager(self.ui)
         self.sess = session_builder(self.ui)
-        self.log_chart = create_chart(self.ui)
+        self.log_chart = create(self.ui)
         self.group_name = ''
         self.group_name_2 = ''
         self.cu_session = ''
@@ -177,10 +173,15 @@ class main_form(QMainWindow):
         self.added_in_chart = {}
         self.added_in_chart_reverse = {}
         self.user_selections = {}
+        self.user_id_name = {}
         self.chart_button_color = {self.ui.chart_button_1 : 'blue', self.ui.chart_button_2 : (199, 0, 57), self.ui.chart_button_3 : (194, 221, 147),
                 self.ui.chart_button_4 : (222, 194, 179), self.ui.chart_button_5 : (154, 101, 255), self.ui.chart_button_6 : (72, 228, 143), 
                 self.ui.chart_button_7 : (255, 195, 0), self.ui.chart_button_8 : (147, 157, 221), self.ui.chart_button_9 : (59, 228, 202), 
                 self.ui.chart_button_10 : (238, 255, 11)}
+        self.chart_button_color_rgb = {self.ui.chart_button_1 : 'blue', self.ui.chart_button_2 : '#C70039', self.ui.chart_button_3 : '#C2DD93',
+                self.ui.chart_button_4 : '#DEC2B3', self.ui.chart_button_5 : '#9A65FF', self.ui.chart_button_6 : '#48E48F', 
+                self.ui.chart_button_7 : '#FFC300', self.ui.chart_button_8 : '#939DDD', self.ui.chart_button_9 : '#3BE4CA', 
+                self.ui.chart_button_10 : '#EEFF0B'}
         
         self.incomplete_sess = []
         self.session_list = []
@@ -468,6 +469,8 @@ class main_form(QMainWindow):
                     pass
                 else:
                     taking_button = self.empty_buttons[0]
+                    if len(user) > 15:
+                        user = f'{user[:15]}...'
                     taking_button.setText(user)
                     self.empty_buttons.remove(taking_button)
                     self.added_in_chart[taking_button] = sel_value
@@ -508,10 +511,11 @@ class main_form(QMainWindow):
 
         self.log_chart.remove_widget()
         
-        self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, 
-                    self.user_date_counts, kpi_selected=kpi_mess_found, all_selected=all_mess_found, 
+        self.log_chart.create_chart(data=self.date_counts, kpi_data=self.date_counts_kpi, 
+                    user_data=self.user_date_counts, kpi_selected=kpi_mess_found, all_selected=all_mess_found, 
                     users_to_check=other_values, button_colors=self.chart_button_color, 
-                    chart_used_buttons=self.added_in_chart_reverse)
+                    chart_used_buttons=self.added_in_chart_reverse, user_names=self.user_id_name,
+                    rgb_colors=self.chart_button_color_rgb)
                             
     def reload_charts_hour(self):
         other_values = []
@@ -534,7 +538,8 @@ class main_form(QMainWindow):
         self.log_chart.create_chart(self.date_hour_counts, self.date_hour_counts_kpi,
                     self.user_date_hour_counts, hourly=True, kpi_selected=kpi_mess_found, all_selected=all_mess_found, 
                     users_to_check=other_values, button_colors=self.chart_button_color, 
-                    chart_used_buttons=self.added_in_chart_reverse)
+                    chart_used_buttons=self.added_in_chart_reverse, user_names=self.user_id_name,
+                    rgb_colors=self.chart_button_color_rgb)
 
     def chart_type_changed(self, event):
         #sends event here when the combo box for changing chart type
@@ -545,6 +550,18 @@ class main_form(QMainWindow):
 
         elif event == 0:
             self.reload_charts_date()
+            
+    def set_button_empty(self):
+        self.ui.chart_button_1.setText('empty')
+        self.ui.chart_button_2.setText('empty')
+        self.ui.chart_button_3.setText('empty')
+        self.ui.chart_button_4.setText('empty')
+        self.ui.chart_button_5.setText('empty')
+        self.ui.chart_button_6.setText('empty')
+        self.ui.chart_button_7.setText('empty')
+        self.ui.chart_button_8.setText('empty')
+        self.ui.chart_button_9.setText('empty')
+        self.ui.chart_button_10.setText('empty')
 
     def cell_copier(self):  #copies cells selected in the table widget
         self.all_cell_selected = {} 
@@ -633,11 +650,12 @@ class main_form(QMainWindow):
         #if the calender widget is on, remove that
         self.box_selected = '' 
         self.ui.calender.hide()
-        self.ui.setMinimumSize(0,0) 
+        self.ui.resize(628, 325) 
+        self.ui.setMinimumSize(0,0)
         self.ui.resize(628, 325)  
 
         if self.ui.tabWidget.currentIndex() == 1:
-            self.resize(1050, 400)
+            self.resize(1060, 400)
         elif self.ui.tabWidget.currentIndex() == 2:
             self.resize(700, 550)
         else:
@@ -1144,7 +1162,8 @@ class main_form(QMainWindow):
                 self.ui.chart_button_6.setText('KPI Count')
                 self.already_in_chart = ['All Count', 'KPI Count']
                 self.log_chart.create_chart(self.date_counts, self.date_counts_kpi, self.user_date_counts, button_colors=self.chart_button_color, 
-                            chart_used_buttons=self.added_in_chart_reverse)
+                            chart_used_buttons=self.added_in_chart_reverse, user_names=self.user_id_name,
+                            rgb_colors=self.chart_button_color_rgb)
                 self.empty_buttons.remove(self.ui.chart_button_1)
                 self.empty_buttons.remove(self.ui.chart_button_6)
             except:
@@ -1319,16 +1338,32 @@ class main_form(QMainWindow):
             self.user_selections['All Count'] = 'All Count'
             self.user_selections['KPI Count'] = 'KPI Count'
         self.added_users.sort()   
+        
+        #keeps a list of all username for easy telegram id to telegram name 
+        #format {user_id:tg_name}
+        
+        for user in self.added_users:
+            if user == '':
+                pass
+            elif user == 'KPI Count':
+                pass
+            elif user == 'All Count':
+                pass
+            else:
+                self.user_id_name[self.user_selections[user]] = user
+
         self.ui.add_user_box.addItems(self.added_users)
 
     def client_starter(self):
         #reset variables, table rows, labels
         #detects multi session or single session
         #and verifies whether a session is active
+        
         self.reload_kpi()
         self.session_detector()
         self.disable_widgets()
         self.label_changer(0, 0)
+        self.set_button_empty()
         self.ui.total_2.setText(f'Total Message: 0')
         self.ui.total_1.setText(f'Total KPI: 0')
         self.empty_buttons = [self.ui.chart_button_1, self.ui.chart_button_2, self.ui.chart_button_3,
@@ -1353,6 +1388,7 @@ class main_form(QMainWindow):
         self.date_counts = {}
         self.date_counts_kpi = {}
         self.user_selections = {}
+        self.user_id_name = {}
         self.date_counts = {}
         self.date_counts_kpi = {}
         self.date_hour_counts = {}
@@ -1645,6 +1681,7 @@ class Worker(QRunnable):
                     #start iterating from the selected message links
                     async for message in client.iter_messages(self.group_name,
                                         offset_id=self.group_ending):
+                        
                         if stop_process == True:
                             #for stopping the thread during processing
                             return
@@ -1658,6 +1695,9 @@ class Worker(QRunnable):
                             break
                             
                         elif message.id > self.group_ending:
+                            pass
+                        
+                        elif message.action is not None:
                             pass
 
                         else:

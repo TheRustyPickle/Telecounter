@@ -4,7 +4,7 @@ from pyqtgraph.Qt import QtCore as graphCore
 import pyqtgraph as pg
 from PyQt5 import QtWidgets
 import datetime
-class create_chart(QWidget):
+class create(QWidget):
     def __init__(self, ui):
         super().__init__()
         self.ui = ui
@@ -15,6 +15,10 @@ class create_chart(QWidget):
         self.all_data = {}
         self.kpi_data = {}
         self.user_data = {}
+        self.button_colors = {}
+        self.chart_used_buttons = {}
+        self.user_names = {}
+        self.rgb_colors = {}
 
         self.dates = []
         self.users_to_check = []
@@ -44,18 +48,25 @@ class create_chart(QWidget):
         self.p2.setGeometry(self.p1.vb.sceneBoundingRect())
         self.p2.linkedViewChanged(self.p1.vb, self.p2.XAxis)
 
-    def create_chart(self, data, kpi_data, user_data, hourly=False, kpi_selected=True, 
-                     all_selected=True, users_to_check=[], button_colors={}, chart_used_buttons={}):
+    def create_chart(self, data={}, kpi_data={}, user_data={}, hourly=False, kpi_selected=True, 
+                     all_selected=True, users_to_check=[], button_colors={}, chart_used_buttons={}, 
+                     user_names={}, rgb_colors={}):
+        
         self.hourly_selected = hourly
         self.all_selected = all_selected
         self.kpi_selected = kpi_selected
         self.users_to_check = users_to_check
+        self.all_data = data
+        self.kpi_data = kpi_data
+        self.user_data = user_data
         self.button_colors = button_colors
         self.chart_used_buttons = chart_used_buttons
-
-        data = dict(sorted(data.items()))
+        self.user_names = user_names
+        self.rgb_colors = rgb_colors
         
-        if hourly == False:
+        data = dict(sorted(self.all_data.items()))
+        
+        if self.hourly_selected == False:
             #there might be dates missing between messages. So added the missing dates and put the values to 0
             first_key = list(data.keys())[0]
             last_key = list(data.keys())[-1]
@@ -72,13 +83,13 @@ class create_chart(QWidget):
                 if int_first_date not in data:
                     data[int_first_date] = 0
                 
-                if int_first_date not in kpi_data:
-                    kpi_data[int_first_date] = 0
+                if int_first_date not in self.kpi_data:
+                    self.kpi_data[int_first_date] = 0
                 
-                if int_first_date not in user_data:
-                    user_data[int_first_date] = {}
+                if int_first_date not in self.user_data:
+                    self.user_data[int_first_date] = {}
         
-        elif hourly == True:
+        elif self.hourly_selected == True:
             first_key = list(data.keys())[0]
             last_key = list(data.keys())[-1]
             
@@ -94,16 +105,16 @@ class create_chart(QWidget):
                 if int_first_date not in data:
                     data[int_first_date] = 0
                 
-                if int_first_date not in kpi_data:
-                    kpi_data[int_first_date] = 0
+                if int_first_date not in self.kpi_data:
+                    self.kpi_data[int_first_date] = 0
                 
-                if int_first_date not in user_data:
-                    user_data[int_first_date] = {}
+                if int_first_date not in self.user_data:
+                    self.user_data[int_first_date] = {}
         
         data = dict(sorted(data.items()))
         self.all_data = data
-        self.kpi_data = kpi_data
-        self.user_data = user_data
+        self.kpi_data = self.kpi_data
+        self.user_data = self.user_data
         self.dates = []
 
         self.plot = pg.PlotWidget()
@@ -147,16 +158,16 @@ class create_chart(QWidget):
             else:
                 new_lab = f'{str(i)[6:8]}-{str(i)[4:6]}'
                 x_labels[0].append((num, new_lab))
-                if hourly == False:
+                if self.hourly_selected == False:
                     x_top_labels[0].append((num, new_lab))
                 else:
                     hour_time = f'{str(i)[8:10]}:00'
                     x_top_labels[0].append((num, hour_time))
                 cu_next = next_x_label
 
-            if i in kpi_data:
+            if i in self.kpi_data:
                 axis_x_kpi.append(num)
-                axis_y_kpi.append(kpi_data[i])
+                axis_y_kpi.append(self.kpi_data[i])
             else:
                 axis_x_kpi.append(num)
                 axis_y_kpi.append(0)
@@ -178,20 +189,23 @@ class create_chart(QWidget):
         if self.kpi_selected == True:
             self.plot.plot(axis_x_kpi, axis_y_kpi, name='KPI Message', pen=pg.mkPen(self.button_colors[self.chart_used_buttons['KPI Count']]))
 
-        if users_to_check != []:
-            for user in users_to_check:
+        if self.users_to_check != []:
+            for user in self.users_to_check:
                 user = int(user)
                 user_x_value = []
                 user_y_value = []
                 num = 0
                 for date in data:
                     user_x_value.append(num)
-                    if user in user_data[date]:
-                        user_y_value.append(int(user_data[date][user]))
+                    if user in self.user_data[date]:
+                        user_y_value.append(int(self.user_data[date][user]))
                     else:
                         user_y_value.append(0)
                     num += 1
-                self.plot.plot(user_x_value, user_y_value, name=f"{user}", pen=pg.mkPen(self.button_colors[self.chart_used_buttons[f'{user}']]))
+                legend_name = self.user_names[str(user)]
+                if len(legend_name) > 25:
+                    legend_name = f'{legend_name[:25]}...'
+                self.plot.plot(user_x_value, user_y_value, name=f"{legend_name}", pen=pg.mkPen(self.button_colors[self.chart_used_buttons[f'{user}']]))
 
         self.cu_widget = self.plot
         self.ui.verticalLayout_11.addWidget(self.plot)
@@ -199,9 +213,9 @@ class create_chart(QWidget):
     def draw_cursor(self):
         #cross hair
         self.vLine = pg.InfiniteLine(angle=90, movable=False, pen=pg.mkPen('k', width=1), label=None,
-                                        labelOpts={'position':0.98, 'color': (200,0,0), 'movable': True, 'fill': (0, 0, 200, 100)})
+                                        labelOpts={'position':0.97, 'color': (200,0,0), 'movable': True, 'fill': (0, 0, 200, 100)})
         self.hLine = pg.InfiniteLine(angle=0, movable=False, pen=pg.mkPen('k', width=1), label='{value:0.1f}',
-                                        labelOpts={'position':0.98, 'color': (200,0,0), 'movable': True, 'fill': (0, 0, 200, 100)})
+                                        labelOpts={'position':0.97, 'color': (200,0,0), 'movable': True, 'fill': (0, 0, 200, 100)})
         self.plot.addItem(self.hLine, ignoreBounds=True)
         self.plot.addItem(self.vLine, ignoreBounds=True)
         self.vb = self.plot.plotItem.vb
@@ -227,15 +241,37 @@ class create_chart(QWidget):
                             pass
                         else:
                             readable_date = f'{str(date_time)[6:8]}-{str(date_time)[4:6]}-{str(date_time)[:4]}'
-                            full_text = f"<span style=\"color:black;font-size:10pt\">Date: {readable_date}</span><br>"
+                            full_text = f"<span style=\"color:black;font-size:10pt\">Date: {readable_date}</span>"
                             if self.hourly_selected == True:
                                 readable_time = f'{str(date_time)[8:10]}:00:00'
-                                full_text += f"<span style=\"color:black;font-size:10pt\">Time: {readable_time}</span><br>"
-                            full_text += f"<span style=\"color:blue;font-size:10pt\">🟦Message Count: {self.all_data[date_time]}</span><br>"
-                            if date_time in self.kpi_data:
-                                full_text += f"<span style=\"color:green;font-size:10pt\">🟦KPI Count: {self.kpi_data[date_time]}</span>"
-                            else:
-                                full_text += f"<span style=\"color:green;font-size:10pt\">🟦KPI Count: 0</span>"
+                                full_text += f"<br><span style=\"color:black;font-size:10pt\">Time: {readable_time}</span>"
+                                
+                            if self.all_selected:
+                                all_color = self.rgb_colors[self.chart_used_buttons['All Count']]
+                                full_text += f"<br><span style=\"color:{all_color};font-size:10pt\">🟦Message Count: {self.all_data[date_time]}</span>"
+                            
+                            if self.kpi_selected:
+                                kpi_color = self.rgb_colors[self.chart_used_buttons['KPI Count']]
+                                
+                                if date_time in self.kpi_data:
+                                    kpi_count = self.kpi_data[date_time]
+                                else:
+                                    kpi_count = 0
+                                    
+                                full_text += f"<br><span style=\"color:{kpi_color};font-size:10pt\">🟦KPI Count: {kpi_count}</span>"
+                                    
+                            for user in self.users_to_check:
+                                user_name = self.user_names[str(user)]
+                                if len(user_name) > 25:
+                                    user_name = f'{user_name[:25]}...'
+                                user_color = self.rgb_colors[self.chart_used_buttons[f'{user}']]
+                                try:
+                                    user_count = self.user_data[date_time][int(user)]
+                                except:
+                                    user_count = 0
+                                    
+                                full_text += f"<br><span style=\"color:{user_color};font-size:10pt\">🟦{user_name}: {user_count}</span>"
+                                
                             self.plot.setToolTip(full_text)
                             self.last_date = date_time
                     except Exception as e:
