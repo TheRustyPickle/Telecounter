@@ -31,7 +31,7 @@ from Chart_Design import *
 #[x] when addding to chart, make index 0 the furthest left available button
 #[x] send proper data when counting by hours
 #[ ] test worker class for entity getting
-#[ ] avoid doing entity for the same user twice, global variable
+#[x] avoid doing entity for the same user twice, global variable
 #[x] same user going twice in add user combobox with multi_session
 #[ ] code number has expired error message
 #[ ] keep a default useless api_id and hash and remove extra buttons from session creator
@@ -49,10 +49,12 @@ from Chart_Design import *
 #[ ] add exit prompt only if counting
 #[x] add user name on tooltip
 #[x] set all button text to empty on count
+#[ ] pre-save all needed data from message in variable at the beginning
 
 version = 'v2.1'
 new_version = ''
 stop_process = False
+verified_entities = {}
 
 def version_check():  # for checking new releases on github
     global new_version
@@ -184,6 +186,7 @@ class main_form(QMainWindow):
                 self.ui.chart_button_10 : '#EEFF0B'}
         
         self.incomplete_sess = []
+        self.complete_sess = []
         self.session_list = []
         self.empty_buttons = []
         self.added_users = []
@@ -1010,8 +1013,6 @@ class main_form(QMainWindow):
         self.ui.chart_type.setEnabled(False)
         self.ui.add_user_box.setEnabled(False)
         self.running = True
-        self.counting = True
-        self.finishing_log = False
         self.force_stop = 2
 
     def enable_widgets(self):
@@ -1040,6 +1041,7 @@ class main_form(QMainWindow):
         self.counting_time = 1
         self.cu_dots = ''
         self.incomplete_sess = []
+        self.complete_sess = []
 
     def counting_label(self):
         #sets status bar label
@@ -1303,13 +1305,21 @@ class main_form(QMainWindow):
         sess_name = sess.split(' is incomplete')[0]
         self.incomplete_sess.append(sess_name)
 
-    def latest_mess_id(self, id_num):
-        self.mess_id_latest = id_num
+    def latest_mess_id(self, id_session):
+        self.mess_id_latest = id_session[0]
+        self.complete_sess.append(id_session[1])
         self.thread_timer.setInterval(500)
 
     def date_message_id(self, id_nums):
-        self.group_starting = id_nums[0]
-        self.group_ending = id_nums[1]
+        if self.group_starting == 0:
+            self.group_starting = id_nums[0]
+        elif self.group_starting != 0 and id_nums[0] < self.group_starting:
+            self.group_starting = id_nums[0]
+        
+        if self.group_ending == 0:
+            self.group_ending = id_nums[1]
+        elif self.group_ending != 0 and id_nums[1] > self.group_ending:
+            self.group_ending = id_nums[1]
 
     def counted_users(self, users):
         #adds to the combobox in the chart tab
@@ -1397,6 +1407,8 @@ class main_form(QMainWindow):
         self.user_date_hour_counts = {}
         self.added_in_chart = {}
         self.added_users = []
+        self.counting = True
+        self.finishing_log = False
 
         #verify the session selected/available ones and start the
         #main function which starts up the thread
@@ -1406,7 +1418,7 @@ class main_form(QMainWindow):
             available_sess = self.session_list
             for i in available_sess:
                 self.ui.statusBar().showMessage(f'Verifying Session {i}')
-                if self.ui.calender.isVisible() or '-' in self.ui.box_starting_mess.text():
+                if self.ui.calender.isVisible() or '-' in self.ui.box_starting_mess.text(): #TODO save somewhere whether date was added or not
                     self.worker = session_verifier(self.group_name, i, self.pri_group, date_added=True, start_date=self.starting_date, end_date=self.ending_date)
                 else:
                     self.worker = session_verifier(self.group_name, i, self.pri_group)
@@ -1507,7 +1519,7 @@ class main_form(QMainWindow):
         #if private group is joined if selected
         #divides the part of each session and starts the
         #thread accordingly
-        if self.mess_id_latest != 0:
+        if self.mess_id_latest != 0 and len(self.session_list) == len(self.incomplete_sess) + len(self.complete_sess):
             self.thread_timer.stop()
 
         elif self.mess_id_latest == 0 and len(self.session_list) == len(self.incomplete_sess):
@@ -1525,6 +1537,7 @@ class main_form(QMainWindow):
             self.thread_timer.setInterval(1000)
             print('Latest Message Not Found')
             return
+        
         pool = QThreadPool.globalInstance()
         threadCount = QThreadPool.globalInstance().maxThreadCount()
         available_sess = self.session_list
@@ -1543,8 +1556,7 @@ class main_form(QMainWindow):
 
         total_counting = int((self.mess_id_latest - self.group_starting))
         part_value = int(total_counting/(len(available_sess)))
-        print(part_value)
-        print(total_counting)
+
         new_starting = self.group_starting
         parts_start = {}
         parts_end = {}
@@ -1615,7 +1627,7 @@ class worker_signals(QObject):
     row_data_2 = pyqtSignal(list)
     mess_char = pyqtSignal(list)
     mess_value = pyqtSignal(object)
-    latest_mess = pyqtSignal(int)
+    latest_mess = pyqtSignal(list)
     incomplete_sess = pyqtSignal(str)
     date_mess_ids = pyqtSignal(list)
     date_counts = pyqtSignal(list)
@@ -1667,7 +1679,8 @@ class Worker(QRunnable):
     @pyqtSlot()
     def run(self):
         async def kpi_counter():
-            global stop_process
+            global stop_process, verified_entities
+            
             client = TelegramClient(self.cu_session, api_id, api_hash)
             await client.connect()
             me = await client.get_me()
@@ -1884,17 +1897,27 @@ class Worker(QRunnable):
                             if stop_process == True:
                                 return
                             try:
-                                entity = await client.get_entity(sender)
-                                id_num = entity.id
-                                username = entity.username
-                                first_name = entity.first_name
-                                last_name = entity.last_name
+                                if sender in verified_entities:
+                                    id_num = verified_entities[sender][0]
+                                    username = verified_entities[sender][1]
+                                    first_name = verified_entities[sender][2]
+                                    last_name = verified_entities[sender][3]
+                                else:
+                                    entity = await client.get_entity(sender)
+                                    id_num = entity.id
+                                    username = entity.username
+                                    first_name = entity.first_name
+                                    last_name = entity.last_name
+                                    verified_entities[sender] = [id_num, username, first_name, last_name]
+                                    
                                 full_name = f'{first_name}'
                                 if last_name is not None:
                                     full_name += f' {last_name}'
                                 total_all += self.message_data[sender]
+                                
                                 print(full_name, username,
                                     self.message_data[sender])
+                                
                                 row_data = [
                                     full_name, username,
                                     self.message_data[sender],
@@ -1963,17 +1986,24 @@ class session_verifier(QRunnable):
                 else:
                     #verifies session whether it can be used for counting
                     async with client:
-
                         if self.date_added == True:
                             start_mess = 0
                             end_mess = 0
+                            new_start_date = int(self.start_date.strftime('%Y%m%d'))
                             async for message in client.iter_messages(self.group_name, offset_date=self.start_date):
-                                start_mess = message.id+1
+                                new_mess_date = int(message.date.strftime('%Y%m%d'))
+                                if new_start_date < new_mess_date:
+                                    start_mess = message.id
+                                else:
+                                    start_mess = message.id + 1     #TODO switch to get_messages
                                 break
+                            
                             async for message in client.iter_messages(self.group_name, offset_date=self.end_date):
-                                end_mess = message.id+1
+                                end_mess = message.id + 1
                                 break
-                            print('Start', start_mess, 'End', end_mess)
+                            
+                            print([start_mess, end_mess])
+                            #print('Start', start_mess, 'End', end_mess)
                             self.signal.date_mess_ids.emit([start_mess, end_mess])
 
                         if self.private_group == True:
@@ -1983,7 +2013,7 @@ class session_verifier(QRunnable):
 
                         if self.private_group == True and self.group_name in group_list:
                             async for message in client.iter_messages(self.group_name):
-                                self.signal.latest_mess.emit(message.id)
+                                self.signal.latest_mess.emit([message.id, self.cu_session])
                                 break
 
                         elif self.private_group == True and self.group_name not in group_list:
@@ -1992,7 +2022,7 @@ class session_verifier(QRunnable):
                         
                         elif self.private_group == False:
                             async for message in client.iter_messages(self.group_name):
-                                self.signal.latest_mess.emit(message.id)
+                                self.signal.latest_mess.emit([message.id, self.cu_session])
                                 break
 
                 await client.disconnect()
