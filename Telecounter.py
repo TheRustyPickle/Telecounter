@@ -39,7 +39,7 @@ from Chart_Design import *
 #[x] check people joining message, uncount them
 #[x] if no user is added to charts, don't respond to hourly or daily changes
 #[ ] if same value selected + not in chart does not work
-#[ ] multi session date not detecting latest message and dividing properly, wait until all sessions are either rejected or complete
+#[x] multi session date not detecting latest message and dividing properly, wait until all sessions are either rejected or complete
 #[x] chart showing inaccurate KPI number
 #[x] copy function not working in kde. Find a different library
 #[ ] change button/chart colors to something that does not match with existing ones
@@ -50,6 +50,7 @@ from Chart_Design import *
 #[x] add user name on tooltip
 #[x] set all button text to empty on count
 #[ ] pre-save all needed data from message in variable at the beginning
+#[ ] count peer_channel messages as the channel name
 
 version = 'v2.1'
 new_version = ''
@@ -1990,13 +1991,26 @@ class session_verifier(QRunnable):
                             start_mess = 0
                             end_mess = 0
                             new_start_date = int(self.start_date.strftime('%Y%m%d'))
-                            async for message in client.iter_messages(self.group_name, offset_date=self.start_date):
-                                new_mess_date = int(message.date.strftime('%Y%m%d'))
-                                if new_start_date < new_mess_date:
-                                    start_mess = message.id
-                                else:
-                                    start_mess = message.id + 1     #TODO switch to get_messages
-                                break
+                            start_mess_veri = False
+                            
+                            while start_mess_veri == False:
+                                async for message in client.iter_messages(self.group_name, offset_date=self.start_date):
+                                    
+                                    #due to big difference in dates sometimes it fails to get any message id
+                                    #so keep looping until the message id is found
+                                    #numeric date was added so in case the selected message is the first
+                                    #message in the chat not necessary to add +1 to it
+                                    
+                                    new_mess_date = int(message.date.strftime('%Y%m%d'))
+                                    
+                                    if str(message.id).isnumeric():
+                                        start_mess_veri = True
+                                        
+                                    if new_start_date < new_mess_date:
+                                        start_mess = message.id
+                                    else:
+                                        start_mess = message.id + 1     #TODO switch to get_messages
+                                    break
                             
                             async for message in client.iter_messages(self.group_name, offset_date=self.end_date):
                                 end_mess = message.id + 1
