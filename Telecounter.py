@@ -30,15 +30,12 @@ from Chart_Design import *
 #[x] add color order for each button pre-set
 #[x] when addding to chart, make index 0 the furthest left available button
 #[x] send proper data when counting by hours
-#[ ] test worker class for entity getting
 #[x] avoid doing entity for the same user twice, global variable
 #[x] same user going twice in add user combobox with multi_session
-#[ ] code number has expired error message
 #[ ] keep a default useless api_id and hash and remove extra buttons from session creator
 #[ ] session name cannot be empty
 #[x] check people joining message, uncount them
 #[x] if no user is added to charts, don't respond to hourly or daily changes
-#[ ] if same value selected + not in chart does not work
 #[x] multi session date not detecting latest message and dividing properly, wait until all sessions are either rejected or complete
 #[x] chart showing inaccurate KPI number
 #[x] copy function not working in kde. Find a different library
@@ -46,11 +43,15 @@ from Chart_Design import *
 #[x] mult session not working properly for charts
 #[x] change legend to names
 #[x] limit chart button and legend length to 15
-#[ ] add exit prompt only if counting
+#[x] add exit prompt only if counting
 #[x] add user name on tooltip
 #[x] set all button text to empty on count
-#[ ] pre-save all needed data from message in variable at the beginning
-#[ ] count peer_channel messages as the channel name
+#[x] pre-save all needed data from message in variable at the beginning
+#[x] count peer_channel messages as the channel name
+#[ ] starting message link empty text
+#[ ] timer to auto clear bottom text
+#[x] fix chart veritical spacer issue. Find a way to remove the spacer
+#[x] reset message log sorting by number/text
 
 version = 'v2.1'
 new_version = ''
@@ -710,14 +711,7 @@ class main_form(QMainWindow):
                 stop_process = True
                 event.accept()
         else:
-            close.setText("You sure?")
-            close.setStandardButtons(QMessageBox.Yes | QMessageBox.Cancel)
-            close.setIcon(QMessageBox.Question)
-            close = close.exec()
-            if close == QMessageBox.Yes:
-                event.accept()
-            else:
-                event.ignore()
+            self.close()
 
     def reload_router(self): #for checking whether Reload button at ID manager was clicked 
         self.reload_pressed = True
@@ -1074,8 +1068,6 @@ class main_form(QMainWindow):
         #distributes counting data to relevant widgets
 
         self.counting = True
-        print(
-            f'Bar Value: {list_data[0]}, Total Message: {list_data[1]}, Counter: {list_data[2]}')
         self.progress_bar(int(list_data[0]))
 
         #the value goes negative when there is a lack of messages/counting
@@ -1092,8 +1084,6 @@ class main_form(QMainWindow):
         #for multi session
 
         self.counting = True
-        print(
-            f'Bar Value: {list_data[0]}, Total Message: {list_data[1]}, Counter: {list_data[2]}')
         thread_number = int(list_data[3])
         self.cu_bar_value[thread_number] = int(list_data[0])
         self.cu_total_mess[thread_number] = int(list_data[1])
@@ -1171,20 +1161,31 @@ class main_form(QMainWindow):
                 self.empty_buttons.remove(self.ui.chart_button_6)
             except:
                 pass
-
+            
+            #make all sorting decending order by default
+            self.ui.table_widget_1.sortByColumn(0, QtCore.Qt.DescendingOrder)
+            self.ui.table_widget_1.sortByColumn(1, QtCore.Qt.DescendingOrder)
+            self.ui.table_widget_1.sortByColumn(2, QtCore.Qt.DescendingOrder)
+            self.ui.table_widget_1.sortByColumn(3, QtCore.Qt.DescendingOrder)
+            self.ui.table_widget_1.sortByColumn(4, QtCore.Qt.DescendingOrder)
+            
             for i in self.all_log_row:
                 name = QtWidgets.QTableWidgetItem(str(self.all_log_row[i][0]))
                 username = QtWidgets.QTableWidgetItem(str(self.all_log_row[i][1]))
+                row_num = self.all_log_row[i][3]
+                
                 count = QtWidgets.QTableWidgetItem()
                 count.setData(QtCore.Qt.DisplayRole, self.all_log_row[i][2])
                 count.setTextAlignment(QtCore.Qt.AlignCenter)
-                row_num = self.all_log_row[i][3]
+                
                 user_id = QtWidgets.QTableWidgetItem()
                 user_id.setData(QtCore.Qt.DisplayRole, i)
                 user_id.setTextAlignment(QtCore.Qt.AlignCenter)
+                
                 average_count = QtWidgets.QTableWidgetItem()
                 average_count.setData(QtCore.Qt.DisplayRole, self.all_log_row[i][4])
                 average_count.setTextAlignment(QtCore.Qt.AlignCenter)
+                
                 self.ui.table_widget_1.setItem(
                     row_num, 0, QtWidgets.QTableWidgetItem(name))
                 self.ui.table_widget_1.setItem(
@@ -1193,19 +1194,31 @@ class main_form(QMainWindow):
                 self.ui.table_widget_1.setItem(row_num, 3, user_id)
                 self.ui.table_widget_1.setItem(row_num, 4, average_count)
 
+            self.ui.table_widget_1.sortByColumn(2, QtCore.Qt.DescendingOrder)
+            
+            self.ui.table_widget_2.sortByColumn(0, QtCore.Qt.DescendingOrder)
+            self.ui.table_widget_2.sortByColumn(1, QtCore.Qt.DescendingOrder)
+            self.ui.table_widget_2.sortByColumn(2, QtCore.Qt.DescendingOrder)
+            self.ui.table_widget_2.sortByColumn(3, QtCore.Qt.DescendingOrder)
+            self.ui.table_widget_2.sortByColumn(4, QtCore.Qt.DescendingOrder)
+
             for i in self.kpi_log_row:
                 name = QtWidgets.QTableWidgetItem(str(self.kpi_log_row[i][0]))
                 username = QtWidgets.QTableWidgetItem(str(self.kpi_log_row[i][1]))
+                row_num = self.kpi_log_row[i][3]
+                
                 count = QtWidgets.QTableWidgetItem()
                 count.setData(QtCore.Qt.DisplayRole, self.kpi_log_row[i][2])
                 count.setTextAlignment(QtCore.Qt.AlignCenter)
-                row_num = self.kpi_log_row[i][3]
+                
                 user_id = QtWidgets.QTableWidgetItem()
                 user_id.setData(QtCore.Qt.DisplayRole, i)
                 user_id.setTextAlignment(QtCore.Qt.AlignCenter)
+                
                 average_count = QtWidgets.QTableWidgetItem()
                 average_count.setData(QtCore.Qt.DisplayRole, self.kpi_log_row[i][4])
                 average_count.setTextAlignment(QtCore.Qt.AlignCenter)
+                
                 self.ui.table_widget_2.setItem(
                     row_num, 0, QtWidgets.QTableWidgetItem(name))
                 self.ui.table_widget_2.setItem(
@@ -1213,6 +1226,8 @@ class main_form(QMainWindow):
                 self.ui.table_widget_2.setItem(row_num, 2, count)
                 self.ui.table_widget_2.setItem(row_num, 3, user_id)
                 self.ui.table_widget_2.setItem(row_num, 4, average_count)
+                
+        self.ui.table_widget_2.sortByColumn(2, QtCore.Qt.DescendingOrder)
 
     def finishing(self, total_num):
         #final function once the session ends
@@ -1254,10 +1269,11 @@ class main_form(QMainWindow):
 
     def set_row_data(self, data):
         # gathers data for setting up on table widgets
-
+        #all_log_row format = {user_id:[full_name, user_name, count, row_number, average_char]}
         if self.ui.Button_count.isEnabled() == True:
             if self.running == True or self.finishing_log == True:
                 self.disable_widgets()
+                
         self.finishing_log = True
         self.counting_label() 
         if int(data[4]) in self.all_log_row:
@@ -1395,7 +1411,7 @@ class main_form(QMainWindow):
         self.cu_kpi_mess = {}
         self.all_log_row = {}
         self.kpi_log_row = {}
-        self.finishing_data = {}
+        self.finishing_data = {}    #TODO move these to a separetae function
         self.date_counts = {}
         self.date_counts_kpi = {}
         self.user_selections = {}
@@ -1419,8 +1435,10 @@ class main_form(QMainWindow):
             available_sess = self.session_list
             for i in available_sess:
                 self.ui.statusBar().showMessage(f'Verifying Session {i}')
-                if self.ui.calender.isVisible() or '-' in self.ui.box_starting_mess.text(): #TODO save somewhere whether date was added or not
-                    self.worker = session_verifier(self.group_name, i, self.pri_group, date_added=True, start_date=self.starting_date, end_date=self.ending_date)
+                if '-' in self.ui.box_starting_mess.text(): 
+                    self.worker = session_verifier(self.group_name, i, self.pri_group, 
+                                    date_added=True, start_date=self.starting_date, 
+                                    end_date=self.ending_date)
                 else:
                     self.worker = session_verifier(self.group_name, i, self.pri_group)
                 self.worker.signal.incomplete_sess.connect(self.incom_sess)
@@ -1696,11 +1714,20 @@ class Worker(QRunnable):
                     async for message in client.iter_messages(self.group_name,
                                         offset_id=self.group_ending):
                         
+                        mess_text = message.message
+                        mess_id = message.id
+                        mess_action = message.action
+                        mess_date = message.date
+                        try:
+                            mess_sender = message.from_id.user_id
+                        except:
+                            mess_sender = message.peer_id.channel_id
+                        
                         if stop_process == True:
                             #for stopping the thread during processing
                             return
 
-                        if int(message.id) < self.group_starting:
+                        if int(mess_id) < self.group_starting:
                             if self.pending > self.max_bar:
                                 pass
                             else:
@@ -1708,10 +1735,10 @@ class Worker(QRunnable):
                             self.total_mess += self.last_id - self.group_starting
                             break
                             
-                        elif message.id > self.group_ending:
+                        elif mess_id > self.group_ending:
                             pass
                         
-                        elif message.action is not None:
+                        elif mess_action is not None:
                             pass
 
                         else:
@@ -1719,7 +1746,7 @@ class Worker(QRunnable):
                                 #get the date in both daily and hourly in int form
                                 #add or take time based on timezone and count the message
                                 #amount for each. 
-                                self.date_today = message.date
+                                self.date_today = mess_date
                                 if self.add_time == True:
                                     self.date_today += datetime.timedelta(minutes=self.time_difference)
                                 else:
@@ -1740,8 +1767,6 @@ class Worker(QRunnable):
 
                                 try:
                                     #another try in case there is no message sender
-
-                                    mess_sender = message.from_id.user_id
                                             
                                     if int_date in self.user_date_mess_count and mess_sender in self.user_date_mess_count[int_date]:
                                         self.user_date_mess_count[int_date][mess_sender] = self.user_date_mess_count[int_date][mess_sender] + 1
@@ -1772,8 +1797,8 @@ class Worker(QRunnable):
                                 try:
                                     try:
                                         #adds date data, message amount to dict for passing it to the charts
-                                        #
-                                        if message.from_id.user_id in accounts:
+                                        
+                                        if mess_sender in accounts:
                                             int_date = int(self.date_today.strftime("%Y%m%d"))
                                             if int_date in self.kpi_mess_count:
                                                 self.kpi_mess_count[int_date] += 1
@@ -1792,24 +1817,22 @@ class Worker(QRunnable):
                                     
                                     try:
                                         #keeps track of message length for counting average character
-                                        mess_text = message.message
                                         mess_len = len(str(mess_text))
                                         if mess_len == 0:
                                             mess_len = 1    #if it's a sticker len is going to be 0, so make it 1
-                                        self.signal.mess_char.emit([message.from_id.user_id, mess_len])
+                                        self.signal.mess_char.emit([mess_sender, mess_len])
                                     except Exception as e:
                                         exc_type, exc_obj, exc_tb = sys.exc_info()
                                         fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
                                         #print(exc_type, fname, exc_tb.tb_lineno, e)
 
-                                    #for keeping track of message data by each user
-                                    mess_sender = message.from_id.user_id
+                                    #for keeping track of message data sent by each user
                                     if mess_sender in self.message_data:
                                         self.message_data[mess_sender] = self.message_data[mess_sender] + 1
                                     elif mess_sender not in self.message_data:
                                         self.message_data[mess_sender] = 1
 
-                                    if int(message.id) == self.group_starting: 
+                                    if int(mess_id) == self.group_starting: 
                                         #group_start is the stopping point for this run
                                         #add the count to the variables and break the loop
                                         
@@ -1821,18 +1844,18 @@ class Worker(QRunnable):
                                         self.total_mess += self.last_id - self.group_starting
 
                                         try:
-                                            if message.from_id.user_id in accounts:
+                                            if mess_sender in accounts:
                                                 self.counter += 1
                                         except Exception as e:
                                             print(e)
                                         break
 
                                     else:
-                                        self.pending += self.mess_value * (self.last_id - message.id)
-                                        self.total_mess += self.last_id - message.id
-                                        self.last_id = message.id
+                                        self.pending += self.mess_value * (self.last_id - mess_id)
+                                        self.total_mess += self.last_id - mess_id
+                                        self.last_id = mess_id
                                         self.pending_message += 1
-                                        if message.from_id.user_id in accounts:
+                                        if mess_sender in accounts:
                                             self.counter += 1
 
                                     #pending controls the bar value. So after each message add the 
@@ -1861,12 +1884,12 @@ class Worker(QRunnable):
                                 except Exception as e:
                                     exc_type, exc_obj, exc_tb = sys.exc_info()
                                     fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                                    #print(exc_type, fname, exc_tb.tb_lineno, e)
+                                    print(exc_type, fname, exc_tb.tb_lineno, e)
                                 
                             except Exception as e:
                                 exc_type, exc_obj, exc_tb = sys.exc_info()
                                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                                #print(exc_type, fname, exc_tb.tb_lineno, e)
+                                print(exc_type, fname, exc_tb.tb_lineno, e)
 
 
                     #in case the bar value does not fill up where it is supposed to
@@ -1883,7 +1906,9 @@ class Worker(QRunnable):
                     self.signal.progress.emit(
                         [self.bar, self.total_mess, self.counter, self.thread_num])
 
-                    self.signal.date_counts.emit([self.date_mess_count, self.kpi_mess_count, self.date_hour_mess_count, self.kpi_hour_mess_count, self.user_date_mess_count, self.user_date_hour_mess_count])
+                    self.signal.date_counts.emit([self.date_mess_count, self.kpi_mess_count, 
+                                                  self.date_hour_mess_count, self.kpi_hour_mess_count, 
+                                                  self.user_date_mess_count, self.user_date_hour_mess_count])
                     total_all = 0
                     total_kpi = 0
                     self.message_data = dict(
@@ -1892,7 +1917,7 @@ class Worker(QRunnable):
 
                     if self.create_log is True:
                         self.signal.list_size.emit(len(self.message_data))
-
+                        
                         for sender in self.message_data:
                             #goes through previously collected user data for log
                             if stop_process == True:
@@ -1905,19 +1930,26 @@ class Worker(QRunnable):
                                     last_name = verified_entities[sender][3]
                                 else:
                                     entity = await client.get_entity(sender)
-                                    id_num = entity.id
-                                    username = entity.username
-                                    first_name = entity.first_name
-                                    last_name = entity.last_name
+                                    try:
+                                        try:
+                                            id_num = entity.id
+                                            username = entity.username
+                                            first_name = entity.first_name
+                                            last_name = entity.last_name
+                                        except:
+                                            id_num = entity.id
+                                            username = entity.title
+                                            first_name = entity.title
+                                            last_name = entity.title
+                                    except Exception as e:
+                                        print(e) 
+                                        
                                     verified_entities[sender] = [id_num, username, first_name, last_name]
                                     
                                 full_name = f'{first_name}'
                                 if last_name is not None:
                                     full_name += f' {last_name}'
                                 total_all += self.message_data[sender]
-                                
-                                print(full_name, username,
-                                    self.message_data[sender])
                                 
                                 row_data = [
                                     full_name, username,
@@ -1947,7 +1979,7 @@ class Worker(QRunnable):
                             except Exception as e:
                                 exc_type, exc_obj, exc_tb = sys.exc_info()
                                 fname = os.path.split(exc_tb.tb_frame.f_code.co_filename)[1]
-                                #print(exc_type, fname, exc_tb.tb_lineno, e)
+                                print(exc_type, fname, exc_tb.tb_lineno, e)
 
                     self.signal.finished.emit([total_all, total_kpi, self.thread_num])
                     self.signal.counted_users.emit(self.all_checked_users)
@@ -2009,7 +2041,7 @@ class session_verifier(QRunnable):
                                     if new_start_date < new_mess_date:
                                         start_mess = message.id
                                     else:
-                                        start_mess = message.id + 1     #TODO switch to get_messages
+                                        start_mess = message.id + 1
                                     break
                             
                             async for message in client.iter_messages(self.group_name, offset_date=self.end_date):
