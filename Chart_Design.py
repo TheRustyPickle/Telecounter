@@ -34,13 +34,17 @@ class create(QWidget):
     def remove_widget(self):
         #remove existing widget so the new one can be placed
         try:
-            if self.cu_widget != '':
-                self.ui.verticalLayout_11.removeWidget(self.cu_widget)
-                self.cu_widget.deleteLater()
-                self.cu_widget = None
-                verticalSpacer = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding) 
-                self.ui.verticalLayout_11.addWidget(verticalSpacer)
-        except:
+            if self.ui.verticalLayout_11.count() > 0:
+                #delete each widget in the layout one by one
+                while self.ui.verticalLayout_11.count():
+                    item = self.ui.verticalLayout_11.takeAt(0)
+                    widget = item.widget()
+                    if widget is not None:
+                        widget.deleteLater()
+            else:
+                pass
+                
+        except Exception as e:
             pass
 
     def updateViews(self):
