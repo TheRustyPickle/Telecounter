@@ -32,14 +32,14 @@ from Chart_Design import *
 #[x] send proper data when counting by hours
 #[x] avoid doing entity for the same user twice, global variable
 #[x] same user going twice in add user combobox with multi_session
-#[ ] keep a default useless api_id and hash and remove extra buttons from session creator
-#[ ] session name cannot be empty
+#[x] keep a default useless api_id and hash and remove extra buttons from session creator
+#[x] session name cannot be empty
 #[x] check people joining message, uncount them
 #[x] if no user is added to charts, don't respond to hourly or daily changes
 #[x] multi session date not detecting latest message and dividing properly, wait until all sessions are either rejected or complete
 #[x] chart showing inaccurate KPI number
 #[x] copy function not working in kde. Find a different library
-#[ ] change button/chart colors to something that does not match with existing ones
+#[x] change button/chart colors to something that does not match with existing ones
 #[x] mult session not working properly for charts
 #[x] change legend to names
 #[x] limit chart button and legend length to 15
@@ -48,8 +48,8 @@ from Chart_Design import *
 #[x] set all button text to empty on count
 #[x] pre-save all needed data from message in variable at the beginning
 #[x] count peer_channel messages as the channel name
-#[ ] starting message link empty text
-#[ ] timer to auto clear bottom text
+#[x] starting message link empty text
+#[x] timer to auto clear bottom text
 #[x] fix chart veritical spacer issue. Find a way to remove the spacer
 #[x] reset message log sorting by number/text
 
@@ -178,13 +178,13 @@ class main_form(QMainWindow):
         self.added_in_chart_reverse = {}
         self.user_selections = {}
         self.user_id_name = {}
-        self.chart_button_color = {self.ui.chart_button_1 : 'blue', self.ui.chart_button_2 : (199, 0, 57), self.ui.chart_button_3 : (194, 221, 147),
+        self.chart_button_color = {self.ui.chart_button_1 : 'blue', self.ui.chart_button_2 : (199, 0, 57), self.ui.chart_button_3 : (176, 50, 160),
                 self.ui.chart_button_4 : (222, 194, 179), self.ui.chart_button_5 : (154, 101, 255), self.ui.chart_button_6 : (72, 228, 143), 
-                self.ui.chart_button_7 : (255, 195, 0), self.ui.chart_button_8 : (147, 157, 221), self.ui.chart_button_9 : (59, 228, 202), 
+                self.ui.chart_button_7 : (255, 195, 0), self.ui.chart_button_8 : (214, 140, 63), self.ui.chart_button_9 : (59, 228, 202), 
                 self.ui.chart_button_10 : (238, 255, 11)}
-        self.chart_button_color_rgb = {self.ui.chart_button_1 : 'blue', self.ui.chart_button_2 : '#C70039', self.ui.chart_button_3 : '#C2DD93',
+        self.chart_button_color_rgb = {self.ui.chart_button_1 : 'blue', self.ui.chart_button_2 : '#C70039', self.ui.chart_button_3 : '#b032a0',
                 self.ui.chart_button_4 : '#DEC2B3', self.ui.chart_button_5 : '#9A65FF', self.ui.chart_button_6 : '#48E48F', 
-                self.ui.chart_button_7 : '#FFC300', self.ui.chart_button_8 : '#939DDD', self.ui.chart_button_9 : '#3BE4CA', 
+                self.ui.chart_button_7 : '#FFC300', self.ui.chart_button_8 : '#d68c3f', self.ui.chart_button_9 : '#3BE4CA', 
                 self.ui.chart_button_10 : '#EEFF0B'}
         
         self.incomplete_sess = []
@@ -216,7 +216,7 @@ class main_form(QMainWindow):
         self.timer.setInterval(10000)
         self.timer.timeout.connect(self.check_update)
 
-        self.clear_statusbar.setInterval(3000)
+        self.clear_statusbar.setInterval(5000)
         self.clear_statusbar.timeout.connect(self.empty_statusbar)
         
         self.timer.start()
@@ -658,9 +658,10 @@ class main_form(QMainWindow):
         self.ui.resize(628, 325) 
         self.ui.setMinimumSize(0,0)
         self.ui.resize(628, 325)  
+        self.ui.statusBar().clearMessage()
 
         if self.ui.tabWidget.currentIndex() == 1:
-            self.resize(1060, 400)
+            self.resize(1070, 400)
         elif self.ui.tabWidget.currentIndex() == 2:
             self.resize(700, 550)
         else:
@@ -804,10 +805,15 @@ class main_form(QMainWindow):
             self.cu_session = self.ui.combobox_session.currentText()
             try:
                 if starting_data == '':
-                    pass
+                    self.ui.statusBar().showMessage(
+                        f'Starting link cannot be empty')
+                    self.clear_statusbar.start()
+                
                 elif 'https://t.me/' not in starting_data:
                     self.ui.statusBar().showMessage(
                         f'https://t.me/group_name/message_id is the correct format')
+                    self.clear_statusbar.start()
+                    
                 else:
                     if '/c/' in starting_data:
                         starting_data = starting_data.replace('https://t.me/c/', '')
@@ -838,19 +844,23 @@ class main_form(QMainWindow):
                         self.group_ending = int(ending_message[1])+1
 
                     if ending_data != '' and self.group_name_2 != self.group_name:
-                        self.ui.statusBar().showMessage(f'Starting and Ending Group is not the same!')
+                        self.ui.statusBar().showMessage(f'Starting and Ending Group is not the same')
+                        self.clear_statusbar.start()
                     
-                    elif self.group_starting > self.group_ending and self.group_ending != 0:
+                    elif ending_data != '' and self.group_starting > self.group_ending and self.group_ending != 0:
                         self.ui.statusBar().showMessage(f'Starting Message ID cannot be bigger than ending message ID')
+                        self.clear_statusbar.start()
 
-                    elif self.group_starting == self.group_ending-1:
-                        self.ui.statusBar().showMessage(f'Starting and Ending Message ID cannot be the same!')
+                    elif ending_data != '' and self.group_starting == self.group_ending-1:
+                        self.ui.statusBar().showMessage(f'Starting and Ending Message ID cannot be the same')
+                        self.clear_statusbar.start()
                     else:
                         self.client_starter()
             except Exception as e:
                 print(e)
                 self.ui.statusBar().showMessage(
                     f'Make sure the links are in correct format. Example: https://t.me/TestGroup/123456 or https://t.me/c/123456/123456')
+                self.clear_statusbar.start()
 
     def datetime_parser(self):
         self.starting_date = self.ui.box_starting_mess.text().split('-')
@@ -909,11 +919,16 @@ class main_form(QMainWindow):
 
         if self.starting_date == self.ending_date:
             self.ui.statusBar().showMessage('Start and Ending date cannot be the same')
+            self.clear_statusbar.start()
 
         elif self.starting_date > self.ending_date:
             self.ui.statusBar().showMessage('Start date cannot be smaller than ending date')
+            self.clear_statusbar.start()
+            
         elif self.group_name == '':
             self.ui.statusBar().showMessage('Group Username cannot be empty')
+            self.clear_statusbar.start()
+            
         else:
             self.client_starter()
 
@@ -1162,12 +1177,12 @@ class main_form(QMainWindow):
             except:
                 pass
             
-            #make all sorting decending order by default
-            self.ui.table_widget_1.sortByColumn(0, QtCore.Qt.DescendingOrder)
-            self.ui.table_widget_1.sortByColumn(1, QtCore.Qt.DescendingOrder)
-            self.ui.table_widget_1.sortByColumn(2, QtCore.Qt.DescendingOrder)
-            self.ui.table_widget_1.sortByColumn(3, QtCore.Qt.DescendingOrder)
-            self.ui.table_widget_1.sortByColumn(4, QtCore.Qt.DescendingOrder)
+            #make all sorting Ascending order by default
+            self.ui.table_widget_1.sortByColumn(0, QtCore.Qt.AscendingOrder)
+            self.ui.table_widget_1.sortByColumn(1, QtCore.Qt.AscendingOrder)
+            self.ui.table_widget_1.sortByColumn(2, QtCore.Qt.AscendingOrder)
+            self.ui.table_widget_1.sortByColumn(3, QtCore.Qt.AscendingOrder)
+            self.ui.table_widget_1.sortByColumn(4, QtCore.Qt.AscendingOrder)
             
             for i in self.all_log_row:
                 name = QtWidgets.QTableWidgetItem(str(self.all_log_row[i][0]))
@@ -1194,13 +1209,13 @@ class main_form(QMainWindow):
                 self.ui.table_widget_1.setItem(row_num, 3, user_id)
                 self.ui.table_widget_1.setItem(row_num, 4, average_count)
 
-            self.ui.table_widget_1.sortByColumn(2, QtCore.Qt.DescendingOrder)
+            self.ui.table_widget_1.sortByColumn(2, QtCore.Qt.AscendingOrder)
             
-            self.ui.table_widget_2.sortByColumn(0, QtCore.Qt.DescendingOrder)
-            self.ui.table_widget_2.sortByColumn(1, QtCore.Qt.DescendingOrder)
-            self.ui.table_widget_2.sortByColumn(2, QtCore.Qt.DescendingOrder)
-            self.ui.table_widget_2.sortByColumn(3, QtCore.Qt.DescendingOrder)
-            self.ui.table_widget_2.sortByColumn(4, QtCore.Qt.DescendingOrder)
+            self.ui.table_widget_2.sortByColumn(0, QtCore.Qt.AscendingOrder)
+            self.ui.table_widget_2.sortByColumn(1, QtCore.Qt.AscendingOrder)
+            self.ui.table_widget_2.sortByColumn(2, QtCore.Qt.AscendingOrder)
+            self.ui.table_widget_2.sortByColumn(3, QtCore.Qt.AscendingOrder)
+            self.ui.table_widget_2.sortByColumn(4, QtCore.Qt.AscendingOrder)
 
             for i in self.kpi_log_row:
                 name = QtWidgets.QTableWidgetItem(str(self.kpi_log_row[i][0]))
@@ -1227,7 +1242,7 @@ class main_form(QMainWindow):
                 self.ui.table_widget_2.setItem(row_num, 3, user_id)
                 self.ui.table_widget_2.setItem(row_num, 4, average_count)
                 
-        self.ui.table_widget_2.sortByColumn(2, QtCore.Qt.DescendingOrder)
+        self.ui.table_widget_2.sortByColumn(2, QtCore.Qt.AscendingOrder)
 
     def finishing(self, total_num):
         #final function once the session ends
@@ -1239,12 +1254,15 @@ class main_form(QMainWindow):
             self.ui.total_1.setText(f'Total KPI: 0') 
             self.ui.statusBar().showMessage(
                 'Incomplete Session. Please create one with Create Session button')
+            self.clear_statusbar.start()
             
         elif total_num[0] == 'error':
             self.ui.total_2.setText(f'Total Message: 0')
             self.ui.total_1.setText(f'Total KPI: 0') 
             self.ui.statusBar().showMessage(
                 total_num[1])
+            self.clear_statusbar.start()
+            
         else:
             self.finishing_data[total_num[2]] = [total_num[0], total_num[1]]
             new_all_num = 0
@@ -1426,6 +1444,7 @@ class main_form(QMainWindow):
         self.added_users = []
         self.counting = True
         self.finishing_log = False
+        self.clear_statusbar.stop()
 
         #verify the session selected/available ones and start the
         #main function which starts up the thread
@@ -1488,18 +1507,21 @@ class main_form(QMainWindow):
             self.thread_timer.stop()
             self.ui.statusBar().showMessage(f'{self.cu_session} Incomplete Session or Invalid Group')
             self.enable_widgets()
+            self.clear_statusbar.start()
             return
         
         elif self.cu_session in self.incomplete_sess and self.pri_group == True:
             self.thread_timer.stop()
             self.ui.statusBar().showMessage(f'{self.cu_session} Incomplete Session or Private Group not joined')
             self.enable_widgets()
+            self.clear_statusbar.start()
             return
 
         elif self.cu_session in self.incomplete_sess:
             self.thread_timer.stop()
             self.ui.statusBar().showMessage(f'Incomplete Session {self.cu_session}')
             self.enable_widgets()
+            self.clear_statusbar.start()
             return
 
         else:
@@ -1545,12 +1567,14 @@ class main_form(QMainWindow):
             self.thread_timer.stop()
             self.ui.statusBar().showMessage(f'{self.cu_session} Incomplete Session or Invalid Group')
             self.enable_widgets()
+            self.clear_statusbar.start()
             return
 
         elif len(self.session_list) == len(self.incomplete_sess):
             self.ui.statusBar().showMessage(f'Could not work with any available session')
             self.thread_timer.stop()
             self.enable_widgets()
+            self.clear_statusbar.start()
             return
         else:
             self.thread_timer.setInterval(1000)
