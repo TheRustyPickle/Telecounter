@@ -7,7 +7,7 @@ import asyncio
 class session_builder:
     def __init__(self, ui):
         self.ui = ui
-        self.api_hash = ''
+        self.api_hash = ''  #TODO add default api_id and hash before making it exe
         self.api_id = 0
         self.tg_pass = ''
         self.sess_name = ''
@@ -51,8 +51,6 @@ class session_builder:
         self.reload_pressed = True
 
     def data_getter(self):
-        self.api_hash = self.ui.box_api_hash.text()
-        self.api_id = self.ui.box_api_id.text()
         self.tg_pass = self.ui.box_pass.text()
         self.sess_name = self.ui.box_session_name.text()
         self.tg_code = self.ui.box_tg_code.text()
@@ -60,8 +58,6 @@ class session_builder:
         self.phone = self.phone.replace(' ', '')
 
     def clear_boxes(self):
-        self.ui.box_api_hash.clear()
-        self.ui.box_api_id.clear()
         self.ui.box_phone.clear()
         self.ui.box_pass.clear()
         self.ui.box_session_name.clear()
@@ -82,6 +78,9 @@ class session_builder:
 
     def tg_code_sender(self):
         self.data_getter()
+        if self.ui.box_session_name.text() == '':
+                self.ui.statusBar().showMessage(f'Session name cannot be empty')
+                return
         self.ui.Button_count.setEnabled(False)
         self.ui.button_create_sess.setEnabled(False)
         self.ui.button_send_code.setEnabled(False)
@@ -119,6 +118,9 @@ class session_builder:
     def sess_creator(self):
         try:
             self.data_getter()
+            if self.ui.box_session_name.text() == '':
+                self.ui.statusBar().showMessage(f'Session name cannot be empty')
+                return
             self.ui.Button_count.setEnabled(False)
             self.ui.button_create_sess.setEnabled(False)
             self.ui.button_send_code.setEnabled(False)
@@ -183,7 +185,10 @@ class code_create(QObject):
                 self.finished.emit()
             except Exception as e:
                 print(e)
-                self.progress.emit('Something went wrong. Please double check your API ID and API Hash')
+                if 'The phone number is invalid' in str(e):
+                        self.progress.emit('Invalid Phone Number. Try again')
+                else:
+                    self.progress.emit('Something went wrong. Please double check your API ID and API Hash')
                 self.finished.emit()
 
         async def create():
