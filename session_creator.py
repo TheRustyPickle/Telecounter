@@ -7,7 +7,7 @@ import asyncio
 class session_builder:
     def __init__(self, ui):
         self.ui = ui
-        self.api_hash = ''  #TODO add default api_id and hash before making it exe
+        self.api_hash = ''  # TODO add default api_id and hash before making it exe
         self.api_id = 0
         self.tg_pass = ''
         self.sess_name = ''
@@ -79,8 +79,8 @@ class session_builder:
     def tg_code_sender(self):
         self.data_getter()
         if self.ui.box_session_name.text() == '':
-                self.ui.statusBar().showMessage(f'Session name cannot be empty')
-                return
+            self.ui.statusBar().showMessage('Session name cannot be empty')
+            return
         self.ui.Button_count.setEnabled(False)
         self.ui.button_create_sess.setEnabled(False)
         self.ui.button_send_code.setEnabled(False)
@@ -119,7 +119,7 @@ class session_builder:
         try:
             self.data_getter()
             if self.ui.box_session_name.text() == '':
-                self.ui.statusBar().showMessage(f'Session name cannot be empty')
+                self.ui.statusBar().showMessage('Session name cannot be empty')
                 return
             self.ui.Button_count.setEnabled(False)
             self.ui.button_create_sess.setEnabled(False)
@@ -186,9 +186,10 @@ class code_create(QObject):
             except Exception as e:
                 print(e)
                 if 'The phone number is invalid' in str(e):
-                        self.progress.emit('Invalid Phone Number. Try again')
+                    self.progress.emit('Invalid Phone Number. Try again')
                 else:
-                    self.progress.emit('Something went wrong. Please double check your API ID and API Hash')
+                    self.progress.emit(
+                        'Something went wrong. Please double check your API ID and API Hash')
                 self.finished.emit()
 
         async def create():
@@ -219,7 +220,9 @@ class code_create(QObject):
                 except Exception as e:
                     print(e)
                     if 'SessionPasswordNeededError' in str(e) or 'Two-steps verification is enabled and a password is required' in str(e):
-                        self.progress.emit('2FA Password Required. Using the password provided')
+                        self.progress.emit(
+                         '2FA Password Required. Using the password provided')
+
                         await client.sign_in(password=password)
                         await client.disconnect()
                         try:
@@ -233,7 +236,8 @@ class code_create(QObject):
                     elif 'The phone code entered was invalid' in str(e):
                         self.progress.emit('Wrong Telegram Code. Try again')
                     else:
-                        self.progress.emit('Something went wrong. Please try again')
+                        self.progress.emit(
+                            'Something went wrong. Please try again')
 
                 self.finished.emit()
                 self.finished.emit()

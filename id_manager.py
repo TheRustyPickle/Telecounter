@@ -183,7 +183,8 @@ class checking_accounts(QObject):
             me = await client.get_me()
             if me == 'None' or me is None:
                 print('Session incomplete')
-                self.progress_2.emit('Session Invalid. Create a new Session to continue')
+                self.progress_2.emit(
+                    'Session Invalid. Create a new Session to continue')
                 self.finished.emit({})
                 self.incomplete.emit()
             else:
@@ -206,15 +207,16 @@ class checking_accounts(QObject):
                             if username is not None:
                                 full_name += f' : {username}'
                             else:
-                                full_name += f': Nothing'
+                                full_name += ': Nothing'
 
                             self.processed_acc[full_name] = [id_num, username]
                             self.progress.emit(full_name)
 
-                        except Exception as e:
+                        except Exception:
                             self.progress.emit(
                                 f'Could Not Find {user} {accounts[user]}')
                             self.processed_acc[f'Could Not Find {user} {accounts[user]}'] = [id_num, 'Unknown']
+
                 await client.disconnect()
                 try:
                     await client.disconnected
@@ -253,7 +255,7 @@ class checking_accounts(QObject):
                         if username is not None:
                             full_name += f': {username}'
                         else:
-                            full_name += f':Nothing'
+                            full_name += ':Nothing'
 
                         self.processed_acc[full_name] = [id_num, username]
                         self.progress.emit(full_name)
