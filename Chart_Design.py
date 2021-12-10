@@ -244,7 +244,7 @@ class create(QWidget):
                     'movable': True, 'fill': (0, 0, 200, 100)})
         self.hLine = pg.InfiniteLine(
             angle=0, movable=False, pen=pg.mkPen(
-                'k', width=1), label='{value:0.1f}', labelOpts={
+                'k', width=1), label='{value:0.0f}', labelOpts={
                     'position': 0.97, 'color': (200, 0, 0), 'movable': True,
                     'fill': (0, 0, 200, 100)})
         self.plot.addItem(self.hLine, ignoreBounds=True)
@@ -280,7 +280,7 @@ class create(QWidget):
 
                             if self.all_selected:
                                 all_color = self.rgb_colors[self.chart_used_buttons['All Count']]
-                                full_text += f"<br><span style=\"color:{all_color};font-size:10pt\">🟦Message Count: {self.all_data[date_time]}</span>"
+                                full_text += f"<br><span style=\"color:{all_color};font-size:10pt\">Message Count: {self.all_data[date_time]}</span>"
 
                             if self.kpi_selected:
                                 kpi_color = self.rgb_colors[self.chart_used_buttons['KPI Count']]
@@ -290,7 +290,7 @@ class create(QWidget):
                                 else:
                                     kpi_count = 0
 
-                                full_text += f"<br><span style=\"color:{kpi_color};font-size:10pt\">🟦KPI Count: {kpi_count}</span>"
+                                full_text += f"<br><span style=\"color:{kpi_color};font-size:10pt\">KPI Count: {kpi_count}</span>"
 
                             for user in self.users_to_check:
                                 user_name = self.user_names[str(user)]
@@ -302,7 +302,7 @@ class create(QWidget):
                                 except Exception:
                                     user_count = 0
 
-                                full_text += f"<br><span style=\"color:{user_color};font-size:10pt\">🟦{user_name}: {user_count}</span>"
+                                full_text += f"<br><span style=\"color:{user_color};font-size:10pt\">{user_name}: {user_count}</span>"
 
                             self.plot.setToolTip(full_text)
                             self.last_date = date_time
