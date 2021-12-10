@@ -304,11 +304,10 @@ class create(QWidget):
 
                                 full_text += f"<br><span style=\"color:{user_color};font-size:10pt\">{user_name}: {user_count}</span>"
 
-                            self.plot.setToolTip(full_text)
+                            self.plot.QToolTip.showText()(full_text)
                             self.last_date = date_time
                     except Exception:
                         self.plot.setToolTip(full_text)
-                        # print(e)
 
             return graphGui.QWidget.eventFilter(self, source, event)
         except Exception as e:
