@@ -2,6 +2,7 @@ from PyQt5.QtCore import QThread, pyqtSignal, QObject
 from PyQt5.QtGui import *
 from telethon import TelegramClient
 import asyncio
+import os
 
 
 class session_builder:
@@ -50,6 +51,13 @@ class session_builder:
     def reload_value(self):
         self.reload_pressed = True
 
+    def delete_sess(self):
+        if os.path.exists(f'{self.sess_name}.session'):
+            os.remove(f'{self.sess_name}.session')
+
+        if os.path.exists(f'{self.sess_name}.session-journal'):
+            os.remove(f'{self.sess_name}.session-journal')
+
     def data_getter(self):
         self.tg_pass = self.ui.box_pass.text()
         self.sess_name = self.ui.box_session_name.text()
@@ -77,10 +85,11 @@ class session_builder:
             self.ui.statusBar().showMessage(f'{text_data}')
 
     def tg_code_sender(self):
-        self.data_getter()
         if self.ui.box_session_name.text() == '':
             self.ui.statusBar().showMessage('Session name cannot be empty')
             return
+        self.data_getter()
+        self.delete_sess()
         self.ui.Button_count.setEnabled(False)
         self.ui.button_create_sess.setEnabled(False)
         self.ui.button_send_code.setEnabled(False)
@@ -117,10 +126,13 @@ class session_builder:
 
     def sess_creator(self):
         try:
-            self.data_getter()
             if self.ui.box_session_name.text() == '':
                 self.ui.statusBar().showMessage('Session name cannot be empty')
                 return
+            elif self.ui.box_tg_code.text() == '':
+                self.ui.statusBar().showMessage('Telegram code cannot be empty')
+                return
+            self.data_getter()
             self.ui.Button_count.setEnabled(False)
             self.ui.button_create_sess.setEnabled(False)
             self.ui.button_send_code.setEnabled(False)
