@@ -1,16 +1,18 @@
 import sys
 import os
+import platform
 import pyperclip
 import requests
 import webbrowser
 import datetime
+from time import gmtime, strftime
 from threading import Thread
 from PyQt5 import uic
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QApplication, QLineEdit, \
     QMainWindow, QMessageBox, QAction, QDesktopWidget, \
     QPushButton, QLabel, QVBoxLayout, QWidget, QHBoxLayout, QWidgetAction
-from PyQt5.QtCore import QRunnable, QThread, pyqtSignal, \
+from PyQt5.QtCore import QRunnable, pyqtSignal, \
     QObject, Qt, QTimer, QThreadPool, pyqtSlot, QDate
 from PyQt5.QtGui import *
 from telethon import TelegramClient
@@ -145,7 +147,7 @@ class main_form(QMainWindow):
         self.added_in_chart_reverse = {}
         self.user_selections = {}
         self.user_id_name = {}
-        self.chart_button_color = {self.ui.chart_button_1: 'blue',
+        self.chart_button_color = {self.ui.chart_button_1: (0, 0, 255),
                                    self.ui.chart_button_2: (199, 0, 57),
                                    self.ui.chart_button_3: (176, 50, 160),
                                    self.ui.chart_button_4: (222, 194, 179),
@@ -155,7 +157,7 @@ class main_form(QMainWindow):
                                    self.ui.chart_button_8: (214, 140, 63),
                                    self.ui.chart_button_9: (59, 228, 202),
                                    self.ui.chart_button_10: (238, 255, 11)}
-        self.chart_button_color_rgb = {self.ui.chart_button_1: 'blue',
+        self.chart_button_color_rgb = {self.ui.chart_button_1: '#0000FF',
                                        self.ui.chart_button_2: '#C70039',
                                        self.ui.chart_button_3: '#b032a0',
                                        self.ui.chart_button_4: '#DEC2B3',
@@ -315,14 +317,18 @@ class main_form(QMainWindow):
         self.ui.box_ending_date.setPlaceholderText('Ending Date')
         self.ui.box_ending_mess.setPlaceholderText('Group Username/Link')
         self.ui.box_ending_date.show()
-        self.ui.label.setText('Start And End Date')
+        self.ui.label.setText('Start and End Date')
         self.ui.label_10.setText('Group Username/Link')
         self.ui.box_starting_mess.setToolTip(
             'Counting will start at the beginning of this date')
         self.ui.box_ending_date.setToolTip(
-            'Counting will stop at the beginning of this date')
+            'Counting will stop at the ending of this date')
         self.ui.box_ending_mess.setToolTip(
-            'Counting will happen at this group')
+            'Counting will happen at this group. Can be a message link or @username')
+        selected_date = self.ui.calender.selectedDate().toString(
+                                                    "dd-MM-yyyy")
+        self.ui.box_starting_mess.clear()
+        self.ui.box_starting_mess.setText(selected_date)
 
     def remove_date_box(self):
         self.ui.calender.hide()
@@ -346,8 +352,8 @@ class main_form(QMainWindow):
             self.button_clear_1.setText('Clear')
             self.starting_paste = False
         self.ui.box_starting_mess.setToolTip(
-            'Start count from this essage link')
-        self.ui.box_ending_mess.setToolTip('End count from this essage ink')
+            'Start count from this message link')
+        self.ui.box_ending_mess.setToolTip('End count at this message link')
         self.ui.setMinimumSize(0, 0)
         self.ui.resize(628, 325)
 
@@ -366,7 +372,9 @@ class main_form(QMainWindow):
             date_entered = False
 
         if date_entered is False:
-            if self.ui.box_ending_date.isVisible():
+            if self.ui.box_ending_date.isVisible() is False and self.ui.box_ending_date.isVisible():
+                self.remove_date_box()
+            elif self.ui.box_ending_date.isVisible():
                 self.remove_date_box()
             else:
                 self.show_date_box()
@@ -385,16 +393,13 @@ class main_form(QMainWindow):
             self.box_selected = 'box_starting_mess'
             self.ui.box_starting_mess.setFocus()
             self.ui.calender.setSelectedDate(datetime.datetime.today())
-            selected_date = self.ui.calender.selectedDate().toString(
-                                                    "dd-MM-yyyy")
-            self.ui.box_starting_mess.clear()
-            self.ui.box_starting_mess.setText(selected_date)
             self.box_decider()
 
     def focus_change(self, old, new):
         try:
             new_widg = new.objectName()
-            if new_widg == 'box_starting_mess' or new_widg == 'box_ending_date':
+            if (new_widg == 'box_starting_mess' or
+                    new_widg == 'box_ending_date'):
                 self.box_selected = new_widg
         except Exception:
             pass
@@ -456,7 +461,8 @@ class main_form(QMainWindow):
     def adding_to_chart(self, user):
         if user != '':
             sel_value = self.user_selections[user]
-            if sel_value not in self.already_in_chart and self.empty_buttons != []:
+            if (sel_value not in self.already_in_chart and
+                    self.empty_buttons != []):
                 taking_button = self.empty_buttons[0]
                 if len(user) > 15:
                     user = f'{user[:15]}...'
@@ -631,7 +637,7 @@ class main_form(QMainWindow):
                 text_to_add = self.all_cell_selected[cell][dat]
                 full_text += f'{text_to_add}'.ljust(
                     self.largest_text_all[dat] + 1)
-                
+
             full_text += '\n'
 
         for cell in self.kpi_cell_selected:
@@ -639,7 +645,7 @@ class main_form(QMainWindow):
                 text_to_add = self.kpi_cell_selected[cell][dat]
                 full_text += f'{text_to_add}'.ljust(
                     self.largest_text_kpi[dat] + 1)
-                
+
             full_text += '\n'
 
         if current_tab == 1 and (self.all_cell_selected != {} or
@@ -853,17 +859,21 @@ class main_form(QMainWindow):
                             self.group_name_2 = ending_message[0]
                         self.group_ending = int(ending_message[1])+1
 
-                    if ending_data != '' and self.group_name_2 != self.group_name:
+                    if (ending_data != '' and
+                       self.group_name_2 != self.group_name):
                         self.ui.statusBar().showMessage(
                             f'Starting and Ending Group is not the same')
                         self.clear_statusbar.start()
 
-                    elif ending_data != '' and self.group_starting > self.group_ending and self.group_ending != 0:
+                    elif (ending_data != '' and
+                          self.group_starting > self.group_ending and
+                          self.group_ending != 0):
                         self.ui.statusBar().showMessage(
                             f'Starting Message ID cannot be bigger than ending message ID')
                         self.clear_statusbar.start()
 
-                    elif ending_data != '' and self.group_starting == self.group_ending-1:
+                    elif (ending_data != '' and
+                          self.group_starting == self.group_ending-1):
                         self.ui.statusBar().showMessage(
                             f'Starting and Ending Message ID cannot be the same')
                         self.clear_statusbar.start()
@@ -877,7 +887,10 @@ class main_form(QMainWindow):
 
     def datetime_parser(self):
         self.starting_date = self.ui.box_starting_mess.text().split('-')
-        self.starting_date = datetime.datetime(int(self.starting_date[2]), int(self.starting_date[1]), int(self.starting_date[0]))
+        self.starting_date = datetime.datetime(
+            int(self.starting_date[2]),
+            int(self.starting_date[1]),
+            int(self.starting_date[0]))
         self.ending_date = self.ui.box_ending_date.text().split('-')
 
         self.cu_timezone()
@@ -908,7 +921,9 @@ class main_form(QMainWindow):
             self.ending_date = datetime.datetime.today()
         else:
             self.ending_date = datetime.datetime(
-                int(self.ending_date[2]), int(self.ending_date[1]), int(self.ending_date[0]))
+                int(self.ending_date[2]),
+                int(self.ending_date[1]),
+                int(self.ending_date[0]))
 
         self.ending_date += datetime.timedelta(days=1)
 
@@ -953,23 +968,33 @@ class main_form(QMainWindow):
             self.client_starter()
 
     def cu_timezone(self):
-        now = datetime.datetime.now()
-        local_now = now.astimezone()
-        local_tz = local_now.tzinfo
-        local_tzname = local_tz.tzname(local_now)
+        try:
+            os_name = platform.system()
+            if os_name == 'Windows':
+                local_tzname = strftime("%z", gmtime())
+            elif os_name == 'Linux':
+                local_tzname = strftime("%z")
 
-        if '+' in local_tzname:
-            self.add_time = True
-        else:
+            if '+' in local_tzname:
+                self.add_time = False
+            else:
+                self.add_time = True
+
+            # add or remove time based on time zone
+            # default time is UTC +0. If not done
+
+            local_tzname = local_tzname.replace('+', '')
+            local_tzname = local_tzname.replace('-', '')
+            local_tzname = "".join(local_tzname.split())
+            new_local_tzname = int(f'{local_tzname[:2]}')
+            extra_time = int(f'{local_tzname[2:]}')
+
+            self.time_difference = int(new_local_tzname * 60) + extra_time
+        except Exception:
             self.add_time = False
-
-        # add or remove time based on time zone
-        # default time is UTC +0. If not done
-
-        local_tzname = local_tzname.replace('+', '')
-        local_tzname = local_tzname.replace('-', '')
-        local_tzname = int("".join(local_tzname.split()))
-        self.time_difference = local_tzname * 60
+            self.time_difference = 0
+            self.ui.statusBar().showMessage(
+                'Error getting local timezone. Defaulting to UTC +0')
 
     def date_messages(self, data):
         # date count history to pass to the designer
@@ -1074,7 +1099,8 @@ class main_form(QMainWindow):
     def counting_label(self):
         # sets status bar label
 
-        if self.ui.Button_count.isEnabled() is True and (self.running is True or self.finishing_log is True):
+        if (self.ui.Button_count.isEnabled() is True and
+                (self.running is True or self.finishing_log is True)):
             self.disable_widgets()
 
         if self.cu_dots == '....':
@@ -1096,6 +1122,7 @@ class main_form(QMainWindow):
             self.counting_time = 1
         else:
             self.counting_time -= 1
+
     def starting_reset(self):
         self.ui.total_2.setText(f'Total Message: 0')
         self.ui.total_1.setText(f'Total KPI: 0')
@@ -1225,7 +1252,8 @@ class main_form(QMainWindow):
                 self.log_chart.remove_widget()
                 self.added_in_chart[self.ui.chart_button_1] = 'All Count'
                 self.added_in_chart[self.ui.chart_button_6] = 'KPI Count'
-                self.added_in_chart_reverse = {v: k for k, v in self.added_in_chart.items()}
+                self.added_in_chart_reverse = {
+                    v: k for k, v in self.added_in_chart.items()}
                 self.ui.chart_button_1.setText('All Count')
                 self.ui.chart_button_6.setText('KPI Count')
                 self.already_in_chart = ['All Count', 'KPI Count']
@@ -1251,7 +1279,8 @@ class main_form(QMainWindow):
 
             for i in self.all_log_row:
                 name = QtWidgets.QTableWidgetItem(str(self.all_log_row[i][0]))
-                username = QtWidgets.QTableWidgetItem(str(self.all_log_row[i][1]))
+                username = QtWidgets.QTableWidgetItem(
+                    str(self.all_log_row[i][1]))
                 row_num = self.all_log_row[i][3]
 
                 count = QtWidgets.QTableWidgetItem()
@@ -1263,7 +1292,8 @@ class main_form(QMainWindow):
                 user_id.setTextAlignment(QtCore.Qt.AlignCenter)
 
                 average_count = QtWidgets.QTableWidgetItem()
-                average_count.setData(QtCore.Qt.DisplayRole, self.all_log_row[i][4])
+                average_count.setData(
+                    QtCore.Qt.DisplayRole, self.all_log_row[i][4])
                 average_count.setTextAlignment(QtCore.Qt.AlignCenter)
 
                 self.ui.table_widget_1.setItem(
@@ -1284,7 +1314,8 @@ class main_form(QMainWindow):
 
             for i in self.kpi_log_row:
                 name = QtWidgets.QTableWidgetItem(str(self.kpi_log_row[i][0]))
-                username = QtWidgets.QTableWidgetItem(str(self.kpi_log_row[i][1]))
+                username = QtWidgets.QTableWidgetItem(
+                    str(self.kpi_log_row[i][1]))
                 row_num = self.kpi_log_row[i][3]
 
                 count = QtWidgets.QTableWidgetItem()
@@ -1296,7 +1327,8 @@ class main_form(QMainWindow):
                 user_id.setTextAlignment(QtCore.Qt.AlignCenter)
 
                 average_count = QtWidgets.QTableWidgetItem()
-                average_count.setData(QtCore.Qt.DisplayRole, self.kpi_log_row[i][4])
+                average_count.setData(
+                    QtCore.Qt.DisplayRole, self.kpi_log_row[i][4])
                 average_count.setTextAlignment(QtCore.Qt.AlignCenter)
 
                 self.ui.table_widget_2.setItem(
@@ -1414,10 +1446,12 @@ class main_form(QMainWindow):
         self.thread_timer.setInterval(500)
 
     def date_message_id(self, id_nums):
-        if self.group_starting == 0 or (self.group_starting != 0 and id_nums[0] < self.group_starting):
+        if (self.group_starting == 0 or
+           (self.group_starting != 0 and id_nums[0] < self.group_starting)):
             self.group_starting = id_nums[0]
 
-        if self.group_ending == 0 or (self.group_ending != 0 and id_nums[1] > self.group_ending):
+        if (self.group_ending == 0 or
+           (self.group_ending != 0 and id_nums[1] > self.group_ending)):
             self.group_ending = id_nums[1]
 
     def counted_users(self, users):
@@ -1472,13 +1506,15 @@ class main_form(QMainWindow):
             available_sess = self.session_list
             full_text = 'Verifying Session'
             for i in available_sess:
-                full_text += f' {i}'
-                
+                full_text += f', {i}'
+
             self.ui.statusBar().showMessage(f'Verifying Session {full_text}')
-            
+
             for i in available_sess:
-                
-                if '-' in self.ui.box_starting_mess.text():
+
+                if (self.ui.calender.isVisible() or
+                    '-' in self.ui.box_starting_mess.text() or
+                        type(self.starting_date) == type(datetime)):
                     self.worker = session_verifier(
                         self.group_name, i, self.pri_group,
                         date_added=True, start_date=self.starting_date,
@@ -1502,7 +1538,9 @@ class main_form(QMainWindow):
 
         else:
             pool = QThreadPool.globalInstance()
-            if self.ui.calender.isVisible() or '-' in self.ui.box_starting_mess.text():
+            if (self.ui.calender.isVisible() or
+                    '-' in self.ui.box_starting_mess.text() or
+                    type(self.starting_date) == type(datetime)):
                 self.worker = session_verifier(
                     self.group_name,
                     self.cu_session,
@@ -1537,7 +1575,8 @@ class main_form(QMainWindow):
             print(self.mess_id_latest)
             self.thread_timer.stop()
 
-        elif self.mess_id_latest == 0 and self.cu_session in self.incomplete_sess:
+        elif (self.mess_id_latest == 0 and
+              self.cu_session in self.incomplete_sess):
             self.thread_timer.stop()
             self.ui.statusBar().showMessage(
                 f'{self.cu_session} Incomplete Session or Invalid Group')
@@ -1545,7 +1584,8 @@ class main_form(QMainWindow):
             self.clear_statusbar.start()
             return
 
-        elif self.cu_session in self.incomplete_sess and self.pri_group is True:
+        elif (self.cu_session in self.incomplete_sess and
+              self.pri_group is True):
             self.thread_timer.stop()
             self.ui.statusBar().showMessage(
                 f'{self.cu_session} Incomplete Session or Private Group not joined')
@@ -1671,8 +1711,9 @@ class main_form(QMainWindow):
 
         message_value = 100 / (self.mess_id_latest - self.group_starting)
         final_part_value = 100
-        # if there is a odd nunber of sessions the dividing  thread value can have
-        # float value. So give each session an integer value and lastly
+        # if there is a odd nunber of sessions the dividing  thread value
+        # can have float value. So give each
+        # session an integer value and lastly
         # give the final session whatever value is left
 
         for i in available_sess:
@@ -1760,7 +1801,12 @@ class Worker(QRunnable):
 
         self.date_today = ''
         self.signal = worker_signals()
-        print(self.group_name, self.group_starting, self.group_ending, self.thread_num, self.add_time, self.time_difference)
+        print(self.group_name,
+              self.group_starting,
+              self.group_ending,
+              self.thread_num,
+              self.add_time,
+              self.time_difference)
 
     @pyqtSlot()
     def run(self):
@@ -1815,7 +1861,7 @@ class Worker(QRunnable):
                                 # amount for each.
 
                                 self.date_today = mess_date
-                                if self.add_time is True:
+                                if self.add_time is False:
                                     self.date_today += datetime.timedelta(
                                         minutes=self.time_difference)
                                 else:
