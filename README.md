@@ -1,6 +1,8 @@
 # Telecounter
 A GUI created with PyQt5 for counting messages in Telegram Groups from users with a Message Link or Date and comes with a chart. Requires Python 3.6+
 
+<img src="https://dl.dropboxusercontent.com/s/n8ivmw6xoy54edr/Telecounter_1.png" alt="Telecounter_1" width="48%" > <img src="https://dl.dropboxusercontent.com/s/9m3r3nrk8ylhi7a/Telecounter_2.png" alt="Telecounter_2" width="48%" >
+
 <h4> How to run</h4>
 
 Download the executable from the latest [Release](https://github.com/Sakib0194/Telecounter/releases) for a one-click runnable file for Windows or Linux or download the source from Release and run Telecounter.py with the required library. The main branch may be unstable.
