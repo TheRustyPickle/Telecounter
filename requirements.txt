@@ -1,5 +1,5 @@
 pyperclip==1.7.0
 PyQt5==5.15.6
 pyqtgraph==0.12.3
-requests==2.26.0
+requests==2.31.0
 Telethon==1.24.0
