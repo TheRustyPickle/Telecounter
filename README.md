@@ -1,7 +1,8 @@
-# Telecounter
-A GUI created with PyQt5 for counting messages in Telegram Groups from users with a Message Link or Date and comes with a chart. Requires Python 3.6+
+# [This project has been rewritten in Rust! Click here to view](https://github.com/TheRustyPickle/Talon)
 
-[This project is currently being rewritten in Rust](https://github.com/TheRustyPickle/Talon)
+# Telecounter
+A GUI created with PyQt5 for counting messages in Telegram Groups from users with a Message Link or Date and comes with a chart. Requires Python 3.6+. The project is no longer maintained. [Use this instead](https://github.com/TheRustyPickle/Talon)
+
 
 <img src="https://dl.dropboxusercontent.com/s/n8ivmw6xoy54edr/Telecounter_1.png" alt="Telecounter_1" width="48%" > <img src="https://dl.dropboxusercontent.com/s/9m3r3nrk8ylhi7a/Telecounter_2.png" alt="Telecounter_2" width="48%" >
 
